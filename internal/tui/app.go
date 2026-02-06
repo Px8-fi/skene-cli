@@ -127,10 +127,17 @@ func NewApp() *App {
 
 // Init initializes the application
 func (a *App) Init() tea.Cmd {
-	return tea.Batch(
-		tick(),
-		textinput.Blink,
-	)
+	var cmds []tea.Cmd
+	cmds = append(cmds, tick())
+	cmds = append(cmds, textinput.Blink)
+	// Initialize intro animation
+	if a.introView != nil {
+		animCmd := a.introView.InitAnimation()
+		if animCmd != nil {
+			cmds = append(cmds, animCmd)
+		}
+	}
+	return tea.Batch(cmds...)
 }
 
 // Update handles messages and updates state
@@ -231,6 +238,15 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.state == StateGame && a.game != nil {
 			a.game.Update()
 			cmds = append(cmds, game.GameTickCmd())
+		}
+
+	default:
+		// Forward messages to intro animation if in intro state
+		if a.state == StateIntro && a.introView != nil {
+			animCmd := a.introView.UpdateAnimation(msg)
+			if animCmd != nil {
+				cmds = append(cmds, animCmd)
+			}
 		}
 	}
 

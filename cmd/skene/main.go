@@ -20,6 +20,9 @@ func main() {
 		tea.WithMouseCellMotion(),
 	)
 
+	// Set program reference for background task communication
+	app.SetProgram(p)
+
 	// Run the program
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Error running program: %v\n", err)

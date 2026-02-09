@@ -29,8 +29,17 @@ type ResultsView struct {
 	header    *components.WizardHeader
 }
 
-// NewResultsView creates a new results view
+// NewResultsView creates a new results view with default placeholder content
 func NewResultsView() *ResultsView {
+	return NewResultsViewWithContent(
+		getResultsGrowthPlanContent(),
+		getResultsManifestContent(),
+		getResultsProductDocsContent(),
+	)
+}
+
+// NewResultsViewWithContent creates a new results view with custom content
+func NewResultsViewWithContent(growthPlan, manifest, productDocs string) *ResultsView {
 	vp := viewport.New(60, 20)
 
 	v := &ResultsView{
@@ -42,10 +51,22 @@ func NewResultsView() *ResultsView {
 		header:    components.NewWizardHeader(7, "Analysis Results"),
 	}
 
-	// Set default content
-	v.contents["Growth Plan"] = getResultsGrowthPlanContent()
-	v.contents["Manifest"] = getResultsManifestContent()
-	v.contents["Product Docs"] = getResultsProductDocsContent()
+	// Set content (use provided or fall back to defaults)
+	if growthPlan != "" {
+		v.contents["Growth Plan"] = growthPlan
+	} else {
+		v.contents["Growth Plan"] = getResultsGrowthPlanContent()
+	}
+	if manifest != "" {
+		v.contents["Manifest"] = manifest
+	} else {
+		v.contents["Manifest"] = getResultsManifestContent()
+	}
+	if productDocs != "" {
+		v.contents["Product Docs"] = productDocs
+	} else {
+		v.contents["Product Docs"] = getResultsProductDocsContent()
+	}
 
 	v.viewport.SetContent(v.contents["Growth Plan"])
 

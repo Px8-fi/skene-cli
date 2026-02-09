@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"skene-terminal-v2/internal/game"
 	"skene-terminal-v2/internal/services/config"
+	"skene-terminal-v2/internal/services/growth"
 	"skene-terminal-v2/internal/services/ide"
 	"skene-terminal-v2/internal/services/syscheck"
 	"skene-terminal-v2/internal/tui/components"
@@ -67,7 +69,13 @@ type InstallDoneMsg struct {
 
 // AnalysisDoneMsg is sent when analysis completes
 type AnalysisDoneMsg struct {
-	Error error
+	Error  error
+	Result *growth.AnalysisResult
+}
+
+// AnalysisPhaseMsg is sent to update analysis progress
+type AnalysisPhaseMsg struct {
+	Update growth.PhaseUpdate
 }
 
 // UVInstallDoneMsg is sent when uv installation completes
@@ -144,6 +152,9 @@ type App struct {
 
 	// Error state
 	currentError *views.ErrorInfo
+
+	// Program reference for sending messages from background tasks
+	program *tea.Program
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -174,6 +185,11 @@ func NewApp() *App {
 	}
 
 	return app
+}
+
+// SetProgram sets the tea.Program reference for sending messages from background tasks
+func (a *App) SetProgram(p *tea.Program) {
+	a.program = p
 }
 
 // Init initializes the application
@@ -251,7 +267,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.analyzingView.TickSpinner()
 			elapsed := time.Since(a.analysisStartTime).Seconds()
 			a.analyzingView.SetElapsedTime(elapsed)
-			a.simulateAnalysisProgress()
+			// Real analysis progress is updated via AnalysisPhaseMsg
 		}
 		if a.state == StateAuth && a.authView != nil {
 			a.authView.TickSpinner()
@@ -309,11 +325,41 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case AnalysisDoneMsg:
 		if msg.Error != nil {
-			a.showError(views.ErrAnalysisFailed)
+			a.showError(&views.ErrorInfo{
+				Code:       "ANALYSIS_FAILED",
+				Title:      "Analysis Failed",
+				Message:    msg.Error.Error(),
+				Suggestion: "Check your API key, network connection, and try again.",
+				Severity:   views.SeverityError,
+				Retryable:  true,
+			})
+		} else if msg.Result != nil && msg.Result.Error != nil {
+			a.showError(&views.ErrorInfo{
+				Code:       "ANALYSIS_FAILED",
+				Title:      "Analysis Failed",
+				Message:    msg.Result.Error.Error(),
+				Suggestion: "Check your API key, network connection, and try again.",
+				Severity:   views.SeverityError,
+				Retryable:  true,
+			})
 		} else {
 			a.state = StateResults
-			a.resultsView = views.NewResultsView()
+			if msg.Result != nil {
+				a.resultsView = views.NewResultsViewWithContent(
+					msg.Result.GrowthPlan,
+					msg.Result.Manifest,
+					msg.Result.ProductDocs,
+				)
+			} else {
+				a.resultsView = views.NewResultsView()
+			}
 			a.resultsView.SetSize(a.width, a.height)
+		}
+
+	case AnalysisPhaseMsg:
+		if a.analyzingView != nil {
+			phase := int(msg.Update.Phase)
+			a.analyzingView.UpdatePhase(phase, msg.Update.Progress)
 		}
 
 	case UVInstallDoneMsg:
@@ -731,16 +777,16 @@ func (a *App) handleAnalysisConfigKeys(key string) tea.Cmd {
 		if a.analysisConfigView.IsDefaultMode() {
 			btn := a.analysisConfigView.GetButtonLabel()
 			if btn == "Yes" {
-				a.startAnalysis()
+				return a.startAnalysis()
 			} else {
 				a.analysisConfigView.SetCustomMode()
 			}
 		} else {
-			a.startAnalysis()
+			return a.startAnalysis()
 		}
 	case "y":
 		if a.analysisConfigView.IsDefaultMode() {
-			a.startAnalysis()
+			return a.startAnalysis()
 		}
 	case "n":
 		if a.analysisConfigView.IsDefaultMode() {
@@ -809,7 +855,7 @@ func (a *App) handleNextStepsKeys(key string) tea.Cmd {
 		case "exit":
 			return tea.Quit
 		case "rerun":
-			a.startAnalysis()
+			return a.startAnalysis()
 		case "config":
 			a.state = StateProviderSelect
 		case "plan", "validate", "open":
@@ -1029,11 +1075,44 @@ func (a *App) startInstalling() {
 	a.state = StateInstalling
 }
 
-func (a *App) startAnalysis() {
+func (a *App) startAnalysis() tea.Cmd {
 	a.analyzingView = views.NewAnalyzingView()
 	a.analyzingView.SetSize(a.width, a.height)
 	a.analysisStartTime = time.Now()
 	a.state = StateAnalyzing
+	return a.startRealAnalysisCmd(a.program)
+}
+
+func (a *App) startRealAnalysisCmd(p *tea.Program) tea.Cmd {
+	cfg := growth.EngineConfig{
+		Provider:   a.configMgr.Config.Provider,
+		Model:      a.configMgr.Config.Model,
+		APIKey:     a.configMgr.Config.APIKey,
+		BaseURL:    a.configMgr.Config.BaseURL,
+		ProjectDir: a.configMgr.Config.ProjectDir,
+		OutputDir:  a.configMgr.Config.OutputDir,
+	}
+
+	// Default project dir to cwd
+	if cfg.ProjectDir == "" {
+		cfg.ProjectDir, _ = os.Getwd()
+	}
+
+	return func() tea.Msg {
+		ctx := context.Background()
+
+		engine := growth.NewEngine(cfg, func(update growth.PhaseUpdate) {
+			if p != nil {
+				p.Send(AnalysisPhaseMsg{Update: update})
+			}
+		})
+
+		result := engine.Run(ctx)
+		if result.Error != nil {
+			return AnalysisDoneMsg{Error: result.Error, Result: result}
+		}
+		return AnalysisDoneMsg{Error: nil, Result: result}
+	}
 }
 
 func (a *App) detectLocalModels() tea.Cmd {

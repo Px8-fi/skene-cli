@@ -142,3 +142,52 @@ func DashboardHelp() string {
 		{Key: "q", Desc: "quit"},
 	})
 }
+
+// WizardHelp returns wizard navigation help
+func WizardHelp() string {
+	return FooterHelp([]HelpItem{
+		{Key: "enter", Desc: "continue"},
+		{Key: "esc", Desc: "back"},
+		{Key: "?", Desc: "help"},
+		{Key: "ctrl+c", Desc: "quit"},
+	})
+}
+
+// WizardSelectHelp returns help for selection screens
+func WizardSelectHelp() string {
+	return FooterHelp([]HelpItem{
+		{Key: "↑/↓", Desc: "navigate"},
+		{Key: "enter", Desc: "select"},
+		{Key: "esc", Desc: "back"},
+		{Key: "ctrl+c", Desc: "quit"},
+	})
+}
+
+// WizardInputHelp returns help for input screens
+func WizardInputHelp() string {
+	return FooterHelp([]HelpItem{
+		{Key: "enter", Desc: "submit"},
+		{Key: "tab", Desc: "switch focus"},
+		{Key: "esc", Desc: "back"},
+		{Key: "ctrl+c", Desc: "quit"},
+	})
+}
+
+// WizardProgressHelp returns help for progress screens
+func WizardProgressHelp() string {
+	return FooterHelp([]HelpItem{
+		{Key: "g", Desc: "play game"},
+		{Key: "ctrl+c", Desc: "quit"},
+	})
+}
+
+// WizardResultsHelp returns help for results screens
+func WizardResultsHelp() string {
+	return FooterHelp([]HelpItem{
+		{Key: "←/→", Desc: "tabs"},
+		{Key: "↑/↓", Desc: "scroll"},
+		{Key: "tab", Desc: "focus"},
+		{Key: "n", Desc: "next steps"},
+		{Key: "ctrl+c", Desc: "quit"},
+	})
+}

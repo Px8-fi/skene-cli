@@ -15,6 +15,7 @@ type Config struct {
 	OutputDir  string `json:"output_dir"`
 	Verbose    bool   `json:"verbose"`
 	ProjectDir string `json:"project_dir"`
+	BaseURL    string `json:"base_url,omitempty"`
 }
 
 // Manager handles configuration file operations
@@ -172,6 +173,11 @@ func (m *Manager) SetProjectDir(dir string) {
 	m.Config.ProjectDir = dir
 }
 
+// SetBaseURL sets the base URL for generic providers
+func (m *Manager) SetBaseURL(url string) {
+	m.Config.BaseURL = url
+}
+
 // GetMaskedAPIKey returns masked API key for display
 func (m *Manager) GetMaskedAPIKey() string {
 	if len(m.Config.APIKey) <= 8 {
@@ -206,6 +212,9 @@ type Provider struct {
 	Models      []Model
 	RequiresKey bool
 	AuthURL     string // For browser-based auth
+	IsLocal     bool   // For local models (Ollama, LM Studio)
+	IsGeneric   bool   // For generic OpenAI-compatible APIs
+	DefaultBase string // Default base URL for local/generic providers
 }
 
 // Model represents an LLM model
@@ -220,8 +229,8 @@ func GetProviders() []Provider {
 	return []Provider{
 		{
 			ID:          "skene",
-			Name:        "Skene",
-			Description: "LLM & Growth context",
+			Name:        "Skene (Recommended)",
+			Description: "Built-in LLM optimized for growth analysis",
 			RequiresKey: true,
 			AuthURL:     "https://www.skene.ai/login?=retrieve-api-key",
 			Models: []Model{
@@ -230,65 +239,70 @@ func GetProviders() []Provider {
 		},
 		{
 			ID:          "openai",
-			Name:        "openai",
-			Description: "LLM Provider",
+			Name:        "OpenAI",
+			Description: "GPT-4o and GPT-4 models",
 			RequiresKey: true,
 			Models: []Model{
-				{ID: "gpt-4o", Name: "gpt-4o", Description: "Most capable GPT-4 model"},
-				{ID: "gpt-4-turbo", Name: "gpt-4-turbo", Description: "Fast GPT-4 model"},
+				{ID: "gpt-4o", Name: "gpt-4o", Description: "Most capable, multimodal"},
+				{ID: "gpt-4-turbo", Name: "gpt-4-turbo", Description: "Fast GPT-4 variant"},
 				{ID: "gpt-3.5-turbo", Name: "gpt-3.5-turbo", Description: "Fast and affordable"},
 			},
 		},
 		{
-			ID:          "gemini",
-			Name:        "gemini",
-			Description: "LLM Provider",
-			RequiresKey: true,
-			Models: []Model{
-				{ID: "gemini-3-flash-preview", Name: "gemini-3-flash-preview", Description: "Fast Gemini model"},
-				{ID: "gemini-3-pro-preview", Name: "gemini-3-pro-preview", Description: "Advanced Gemini model"},
-				{ID: "gemini-2.5-flash", Name: "gemini-2.5-flash", Description: "Balanced performance"},
-			},
-		},
-		{
 			ID:          "anthropic",
-			Name:        "anthropic",
-			Description: "LLM Provider",
+			Name:        "Anthropic",
+			Description: "Claude models with strong reasoning",
 			RequiresKey: true,
 			Models: []Model{
+				{ID: "claude-sonnet-4-5", Name: "claude-sonnet-4-5", Description: "Best balance of speed and capability"},
 				{ID: "claude-3-opus", Name: "claude-3-opus", Description: "Most capable Claude"},
-				{ID: "claude-3-sonnet", Name: "claude-3-sonnet", Description: "Balanced performance"},
 				{ID: "claude-3-haiku", Name: "claude-3-haiku", Description: "Fast and efficient"},
 			},
 		},
 		{
-			ID:          "meta",
-			Name:        "meta",
-			Description: "LLM Provider",
+			ID:          "gemini",
+			Name:        "Gemini",
+			Description: "Google's Gemini models",
 			RequiresKey: true,
 			Models: []Model{
-				{ID: "llama-3-70b", Name: "llama-3-70b", Description: "Large Llama model"},
-				{ID: "llama-3-8b", Name: "llama-3-8b", Description: "Efficient Llama model"},
+				{ID: "gemini-3-flash-preview", Name: "gemini-3-flash-preview", Description: "Fast and efficient"},
+				{ID: "gemini-3-pro-preview", Name: "gemini-3-pro-preview", Description: "Advanced capability"},
+				{ID: "gemini-2.5-flash", Name: "gemini-2.5-flash", Description: "Balanced performance"},
 			},
 		},
 		{
-			ID:          "cohere",
-			Name:        "cohere",
-			Description: "LLM Provider",
-			RequiresKey: true,
+			ID:          "ollama",
+			Name:        "Ollama (Local)",
+			Description: "Run models locally with Ollama",
+			RequiresKey: false,
+			IsLocal:     true,
+			DefaultBase: "http://localhost:11434/v1",
 			Models: []Model{
-				{ID: "command-r-plus", Name: "command-r-plus", Description: "Enterprise model"},
-				{ID: "command-r", Name: "command-r", Description: "RAG optimized"},
+				{ID: "llama3.3", Name: "llama3.3", Description: "Meta's Llama 3.3"},
+				{ID: "mistral", Name: "mistral", Description: "Mistral 7B"},
+				{ID: "codellama", Name: "codellama", Description: "Code-focused Llama"},
+				{ID: "deepseek-r1", Name: "deepseek-r1", Description: "DeepSeek R1 reasoning"},
 			},
 		},
 		{
-			ID:          "huggingface",
-			Name:        "huggingface",
-			Description: "LLM Provider",
-			RequiresKey: true,
+			ID:          "lmstudio",
+			Name:        "LM Studio (Local)",
+			Description: "Run models locally with LM Studio",
+			RequiresKey: false,
+			IsLocal:     true,
+			DefaultBase: "http://localhost:1234/v1",
 			Models: []Model{
-				{ID: "mistral-7b", Name: "mistral-7b", Description: "Open source model"},
-				{ID: "mixtral-8x7b", Name: "mixtral-8x7b", Description: "MoE architecture"},
+				{ID: "auto", Name: "Currently loaded model", Description: "Uses whatever model is loaded in LM Studio"},
+			},
+		},
+		{
+			ID:          "generic",
+			Name:        "Other (OpenAI-compatible)",
+			Description: "Any OpenAI-compatible API endpoint",
+			RequiresKey: true,
+			IsGeneric:   true,
+			Models: []Model{
+				{ID: "custom", Name: "Custom model", Description: "Specify model name manually"},
 			},
 		},
 	}
@@ -303,4 +317,16 @@ func GetProviderByID(id string) *Provider {
 		}
 	}
 	return nil
+}
+
+// IsLocalProvider returns true if the provider runs locally
+func IsLocalProvider(id string) bool {
+	p := GetProviderByID(id)
+	return p != nil && p.IsLocal
+}
+
+// IsGenericProvider returns true if the provider is generic
+func IsGenericProvider(id string) bool {
+	p := GetProviderByID(id)
+	return p != nil && p.IsGeneric
 }

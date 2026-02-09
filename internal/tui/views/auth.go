@@ -9,15 +9,29 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// AuthView handles Skene auth simulation with countdown
+// AuthView handles Skene auth with magic link and fallback
 type AuthView struct {
-	width     int
-	height    int
-	provider  *config.Provider
-	countdown int // seconds remaining
-	authURL   string
+	width        int
+	height       int
+	provider     *config.Provider
+	countdown    int // seconds remaining
+	authURL      string
 	showFallback bool
+	header       *components.WizardHeader
+	spinner      *components.Spinner
+	authState    AuthState
 }
+
+// AuthState represents the authentication state
+type AuthState int
+
+const (
+	AuthStateCountdown AuthState = iota
+	AuthStateBrowserOpen
+	AuthStateWaiting
+	AuthStateSuccess
+	AuthStateFallback
+)
 
 // NewAuthView creates a new auth view
 func NewAuthView(provider *config.Provider) *AuthView {
@@ -31,6 +45,9 @@ func NewAuthView(provider *config.Provider) *AuthView {
 		countdown:    3,
 		authURL:      authURL,
 		showFallback: false,
+		header:       components.NewWizardHeader(4, "Authentication"),
+		spinner:      components.NewSpinner(),
+		authState:    AuthStateCountdown,
 	}
 }
 
@@ -38,6 +55,7 @@ func NewAuthView(provider *config.Provider) *AuthView {
 func (v *AuthView) SetSize(width, height int) {
 	v.width = width
 	v.height = height
+	v.header.SetWidth(width)
 }
 
 // SetCountdown updates countdown value
@@ -55,14 +73,25 @@ func (v *AuthView) GetAuthURL() string {
 	return v.authURL
 }
 
+// SetAuthState updates the auth state
+func (v *AuthView) SetAuthState(state AuthState) {
+	v.authState = state
+}
+
 // ShowFallback enables fallback mode
 func (v *AuthView) ShowFallback() {
 	v.showFallback = true
+	v.authState = AuthStateFallback
 }
 
 // IsFallbackShown returns if fallback is shown
 func (v *AuthView) IsFallbackShown() bool {
 	return v.showFallback
+}
+
+// TickSpinner advances the spinner
+func (v *AuthView) TickSpinner() {
+	v.spinner.Tick()
 }
 
 // Render the auth view
@@ -73,14 +102,56 @@ func (v *AuthView) Render() string {
 
 	sectionWidth := 60
 
-	// Page title
-	title := styles.PageTitle("Configuration", v.width)
+	// Wizard header
+	wizHeader := v.header.Render()
 
-	// Auth message
-	message := styles.Body.Render("Redirecting you to")
+	// Auth content based on state
+	var authContent string
+	switch v.authState {
+	case AuthStateCountdown:
+		authContent = v.renderCountdown(sectionWidth)
+	case AuthStateBrowserOpen, AuthStateWaiting:
+		authContent = v.renderWaiting(sectionWidth)
+	case AuthStateSuccess:
+		authContent = v.renderSuccess(sectionWidth)
+	default:
+		authContent = v.renderCountdown(sectionWidth)
+	}
+
+	// Footer
+	footer := lipgloss.NewStyle().
+		Width(v.width).
+		Align(lipgloss.Center).
+		Render(components.FooterHelp([]components.HelpItem{
+			{Key: "m", Desc: "manual entry"},
+			{Key: "esc", Desc: "cancel"},
+		}))
+
+	// Combine
+	fullContent := lipgloss.JoinVertical(
+		lipgloss.Center,
+		wizHeader,
+		"",
+		"",
+		authContent,
+	)
+
+	centered := lipgloss.Place(
+		v.width,
+		v.height-3,
+		lipgloss.Center,
+		lipgloss.Center,
+		fullContent,
+	)
+
+	return centered + "\n" + footer
+}
+
+func (v *AuthView) renderCountdown(width int) string {
+	message := styles.Body.Render("Opening browser for Skene authentication")
 	url := styles.Accent.Render(v.authURL)
-	
-	countdownText := fmt.Sprintf("in %ds", v.countdown)
+
+	countdownText := fmt.Sprintf("Redirecting in %ds...", v.countdown)
 	countdownStyled := styles.Muted.Render(countdownText)
 
 	// Countdown visual
@@ -107,47 +178,16 @@ func (v *AuthView) Render() string {
 		countdownVisual,
 	)
 
-	box := styles.Box.
-		Width(sectionWidth).
+	return styles.Box.
+		Width(width).
 		Align(lipgloss.Center).
 		Render(content)
-
-	// Footer
-	footer := lipgloss.NewStyle().
-		Width(v.width).
-		Align(lipgloss.Center).
-		Render(components.FooterHelp([]components.HelpItem{
-			{Key: "m", Desc: "manual entry"},
-			{Key: "esc", Desc: "cancel"},
-		}))
-
-	// Combine
-	fullContent := lipgloss.JoinVertical(
-		lipgloss.Center,
-		title,
-		"",
-		"",
-		box,
-	)
-
-	centered := lipgloss.Place(
-		v.width,
-		v.height-3,
-		lipgloss.Center,
-		lipgloss.Center,
-		fullContent,
-	)
-
-	return centered + "\n" + footer
 }
 
-func (v *AuthView) renderFallback() string {
-	sectionWidth := 60
-
-	title := styles.PageTitle("Configuration", v.width)
-
-	message := styles.Body.Render("Browser auth cancelled.")
-	subMessage := styles.Muted.Render("You can enter your API key manually.")
+func (v *AuthView) renderWaiting(width int) string {
+	message := v.spinner.SpinnerWithText("Waiting for authentication...")
+	subMessage := styles.Muted.Render("Complete the login in your browser")
+	url := styles.Accent.Render(v.authURL)
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
@@ -155,7 +195,48 @@ func (v *AuthView) renderFallback() string {
 		"",
 		subMessage,
 		"",
-		styles.Muted.Render("Press Enter to continue to manual entry"),
+		url,
+	)
+
+	return styles.Box.
+		Width(width).
+		Align(lipgloss.Center).
+		Render(content)
+}
+
+func (v *AuthView) renderSuccess(width int) string {
+	message := styles.SuccessText.Render("✓ Authentication successful!")
+	subMessage := styles.Muted.Render("API key received and saved")
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Center,
+		message,
+		"",
+		subMessage,
+	)
+
+	return styles.Box.
+		Width(width).
+		Align(lipgloss.Center).
+		Render(content)
+}
+
+func (v *AuthView) renderFallback() string {
+	sectionWidth := 60
+
+	wizHeader := v.header.Render()
+
+	message := styles.Body.Render("Browser auth cancelled.")
+	subMessage := styles.Muted.Render("You can enter your Skene API key manually.")
+	hint := styles.Accent.Render("Press Enter to continue to manual entry")
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Center,
+		message,
+		"",
+		subMessage,
+		"",
+		hint,
 	)
 
 	box := styles.Box.
@@ -173,7 +254,7 @@ func (v *AuthView) renderFallback() string {
 
 	fullContent := lipgloss.JoinVertical(
 		lipgloss.Center,
-		title,
+		wizHeader,
 		"",
 		"",
 		box,

@@ -19,6 +19,7 @@ type ProviderView struct {
 	maxVisible    int
 	buttonGroup   *components.ButtonGroup
 	buttonFocused bool
+	header        *components.WizardHeader
 }
 
 // NewProviderView creates a new provider view
@@ -29,6 +30,7 @@ func NewProviderView() *ProviderView {
 		maxVisible:    7,
 		buttonGroup:   components.NavigationButtons(false),
 		buttonFocused: false,
+		header:        components.NewWizardHeader(3, "AI Provider"),
 	}
 }
 
@@ -36,8 +38,9 @@ func NewProviderView() *ProviderView {
 func (v *ProviderView) SetSize(width, height int) {
 	v.width = width
 	v.height = height
+	v.header.SetWidth(width)
 	// Adjust max visible based on height
-	v.maxVisible = (height - 15) / 3
+	v.maxVisible = (height - 18) / 3
 	if v.maxVisible < 3 {
 		v.maxVisible = 3
 	}
@@ -114,42 +117,33 @@ func (v *ProviderView) Render() string {
 		sectionWidth = 80
 	}
 
-	// Page title
-	title := styles.PageTitle("Configuration", v.width)
+	// Wizard header
+	wizHeader := v.header.Render()
 
 	// Provider list section
 	listSection := v.renderProviderList(sectionWidth)
 
-	// Step indicator and buttons
-	stepIndicator := components.StepIndicator(1, 4)
+	// Buttons
 	buttons := v.buttonGroup.Render()
-
-	bottomBar := lipgloss.JoinHorizontal(
-		lipgloss.Center,
-		stepIndicator,
-		"          ",
-		buttons,
-	)
-
-	bottomBarCentered := lipgloss.NewStyle().
+	buttonsCentered := lipgloss.NewStyle().
 		Width(sectionWidth).
 		Align(lipgloss.Right).
-		Render(bottomBar)
+		Render(buttons)
 
 	// Footer
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.ConfigHelp())
+		Render(components.WizardSelectHelp())
 
 	// Combine
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
-		title,
+		wizHeader,
 		"",
 		listSection,
 		"",
-		bottomBarCentered,
+		buttonsCentered,
 	)
 
 	centered := lipgloss.Place(
@@ -164,7 +158,7 @@ func (v *ProviderView) Render() string {
 }
 
 func (v *ProviderView) renderProviderList(width int) string {
-	header := styles.SectionHeader.Render("Select Provider")
+	header := styles.SectionHeader.Render("Select AI Provider")
 
 	// Provider count
 	count := styles.Muted.Render(fmt.Sprintf("%d / %d providers", v.selectedIndex+1, len(v.providers)))
@@ -191,7 +185,24 @@ func (v *ProviderView) renderProviderList(width int) string {
 			desc := styles.ListDescription.Render(p.Description)
 			item = name + "\n" + desc
 		}
+
+		// Add badges
+		if p.IsLocal {
+			item += "  " + styles.Muted.Render("[local]")
+		}
+		if p.IsGeneric {
+			item += "  " + styles.Muted.Render("[custom endpoint]")
+		}
+
 		items = append(items, item)
+	}
+
+	// Scroll indicators
+	if v.scrollOffset > 0 {
+		items = append([]string{styles.Muted.Render("  ↑ more above")}, items...)
+	}
+	if endIdx < len(v.providers) {
+		items = append(items, styles.Muted.Render("  ↓ more below"))
 	}
 
 	list := lipgloss.JoinVertical(lipgloss.Left, items...)
@@ -213,6 +224,6 @@ func (v *ProviderView) GetHelpItems() []components.HelpItem {
 		{Key: "↑/↓", Desc: "select provider"},
 		{Key: "enter", Desc: "confirm selection"},
 		{Key: "esc", Desc: "go back"},
-		{Key: "q", Desc: "quit"},
+		{Key: "ctrl+c", Desc: "quit"},
 	}
 }

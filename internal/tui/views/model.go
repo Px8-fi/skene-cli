@@ -17,6 +17,7 @@ type ModelView struct {
 	selectedIndex int
 	buttonGroup   *components.ButtonGroup
 	buttonFocused bool
+	header        *components.WizardHeader
 }
 
 // NewModelView creates a new model view
@@ -26,6 +27,7 @@ func NewModelView(provider *config.Provider) *ModelView {
 		selectedIndex: 0,
 		buttonGroup:   components.NavigationButtons(false),
 		buttonFocused: false,
+		header:        components.NewWizardHeader(3, "Select Model"),
 	}
 }
 
@@ -40,6 +42,7 @@ func (v *ModelView) SetProvider(provider *config.Provider) {
 func (v *ModelView) SetSize(width, height int) {
 	v.width = width
 	v.height = height
+	v.header.SetWidth(width)
 }
 
 // HandleUp moves selection up
@@ -111,42 +114,33 @@ func (v *ModelView) Render() string {
 		sectionWidth = 80
 	}
 
-	// Page title
-	title := styles.PageTitle("Configuration", v.width)
+	// Wizard header
+	wizHeader := v.header.Render()
 
 	// Model list section
 	listSection := v.renderModelList(sectionWidth)
 
-	// Step indicator and buttons
-	stepIndicator := components.StepIndicator(2, 4)
+	// Buttons
 	buttons := v.buttonGroup.Render()
-
-	bottomBar := lipgloss.JoinHorizontal(
-		lipgloss.Center,
-		stepIndicator,
-		"          ",
-		buttons,
-	)
-
-	bottomBarCentered := lipgloss.NewStyle().
+	buttonsCentered := lipgloss.NewStyle().
 		Width(sectionWidth).
 		Align(lipgloss.Right).
-		Render(bottomBar)
+		Render(buttons)
 
 	// Footer
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.ConfigHelp())
+		Render(components.WizardSelectHelp())
 
 	// Combine
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
-		title,
+		wizHeader,
 		"",
 		listSection,
 		"",
-		bottomBarCentered,
+		buttonsCentered,
 	)
 
 	centered := lipgloss.Place(
@@ -203,6 +197,6 @@ func (v *ModelView) GetHelpItems() []components.HelpItem {
 		{Key: "↑/↓", Desc: "select model"},
 		{Key: "enter", Desc: "confirm selection"},
 		{Key: "esc", Desc: "go back"},
-		{Key: "q", Desc: "quit"},
+		{Key: "ctrl+c", Desc: "quit"},
 	}
 }

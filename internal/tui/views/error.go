@@ -26,7 +26,7 @@ type ErrorInfo struct {
 	Retryable  bool
 }
 
-// ErrorView displays errors with suggested fixes
+// ErrorView displays errors with suggested fixes and retry
 type ErrorView struct {
 	width       int
 	height      int
@@ -34,6 +34,7 @@ type ErrorView struct {
 	buttonGroup *components.ButtonGroup
 	logs        []string
 	showLogs    bool
+	header      *components.WizardHeader
 }
 
 // NewErrorView creates a new error view
@@ -49,6 +50,7 @@ func NewErrorView(err *ErrorInfo) *ErrorView {
 		error:       err,
 		buttonGroup: buttons,
 		logs:        make([]string, 0),
+		header:      components.NewWizardHeader(0, "Error"),
 	}
 }
 
@@ -56,6 +58,7 @@ func NewErrorView(err *ErrorInfo) *ErrorView {
 func (v *ErrorView) SetSize(width, height int) {
 	v.width = width
 	v.height = height
+	v.header.SetWidth(width)
 }
 
 // SetError updates the error to display
@@ -101,13 +104,13 @@ func (v *ErrorView) Render() string {
 	var titleStyle lipgloss.Style
 	switch v.error.Severity {
 	case SeverityWarning:
-		icon = "⚠️"
+		icon = "!"
 		titleStyle = lipgloss.NewStyle().Foreground(styles.Warning)
 	case SeverityError:
-		icon = "❌"
+		icon = "X"
 		titleStyle = styles.Error
 	case SeverityCritical:
-		icon = "🚨"
+		icon = "!!"
 		titleStyle = styles.Error.Bold(true)
 	}
 
@@ -122,7 +125,7 @@ func (v *ErrorView) Render() string {
 
 	// Suggestion box
 	suggestionHeader := styles.SectionHeader.Render("Suggested Fix")
-	suggestion := styles.SuccessText.Render("→ " + v.error.Suggestion)
+	suggestion := styles.SuccessText.Render("> " + v.error.Suggestion)
 
 	suggestionBox := styles.Box.
 		Width(sectionWidth - 8).
@@ -161,7 +164,7 @@ func (v *ErrorView) Render() string {
 			{Key: "←/→", Desc: "select"},
 			{Key: "enter", Desc: "confirm"},
 			{Key: "l", Desc: "toggle logs"},
-			{Key: "q", Desc: "quit"},
+			{Key: "ctrl+c", Desc: "quit"},
 		}))
 
 	// Center
@@ -182,7 +185,7 @@ func (v *ErrorView) renderLogs() string {
 		sectionWidth = 100
 	}
 
-	title := styles.SectionHeader.Render("Installation Logs")
+	title := styles.SectionHeader.Render("Logs")
 
 	// Build log content
 	var logLines []string
@@ -224,7 +227,7 @@ func (v *ErrorView) renderLogs() string {
 		Align(lipgloss.Center).
 		Render(components.FooterHelp([]components.HelpItem{
 			{Key: "l", Desc: "close logs"},
-			{Key: "q", Desc: "quit"},
+			{Key: "ctrl+c", Desc: "quit"},
 		}))
 
 	centered := lipgloss.Place(
@@ -244,7 +247,7 @@ func (v *ErrorView) GetHelpItems() []components.HelpItem {
 		{Key: "←/→", Desc: "select option"},
 		{Key: "enter", Desc: "confirm"},
 		{Key: "l", Desc: "view/hide logs"},
-		{Key: "q", Desc: "quit"},
+		{Key: "ctrl+c", Desc: "quit"},
 	}
 }
 
@@ -253,8 +256,8 @@ var (
 	ErrPythonNotFound = &ErrorInfo{
 		Code:       "PYTHON_NOT_FOUND",
 		Title:      "Python Not Found",
-		Message:    "Python is required but was not found in your PATH.",
-		Suggestion: "Install Python 3.8+ from python.org or your package manager.",
+		Message:    "Python 3.11+ is required but was not found in your PATH.",
+		Suggestion: "Install Python 3.11+ from python.org or your package manager.",
 		Severity:   SeverityError,
 		Retryable:  false,
 	}
@@ -292,6 +295,33 @@ var (
 		Message:    "The provided API key was rejected by the provider.",
 		Suggestion: "Double-check your API key and ensure it has the required permissions.",
 		Severity:   SeverityError,
+		Retryable:  true,
+	}
+
+	ErrLocalModelNotFound = &ErrorInfo{
+		Code:       "LOCAL_MODEL_NOT_FOUND",
+		Title:      "Local Model Runtime Not Found",
+		Message:    "Could not detect Ollama or LM Studio running.",
+		Suggestion: "Start your local model server and try again.",
+		Severity:   SeverityWarning,
+		Retryable:  true,
+	}
+
+	ErrAnalysisFailed = &ErrorInfo{
+		Code:       "ANALYSIS_FAILED",
+		Title:      "Analysis Failed",
+		Message:    "The codebase analysis encountered an error.",
+		Suggestion: "Check the logs for details and try again.",
+		Severity:   SeverityError,
+		Retryable:  true,
+	}
+
+	ErrUVInstallFailed = &ErrorInfo{
+		Code:       "UV_INSTALL_FAILED",
+		Title:      "uv Installation Failed",
+		Message:    "Failed to install the uv package manager.",
+		Suggestion: "Try installing manually: curl -LsSf https://astral.sh/uv/install.sh | sh",
+		Severity:   SeverityWarning,
 		Retryable:  true,
 	}
 )

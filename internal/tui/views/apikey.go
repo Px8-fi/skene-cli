@@ -11,34 +11,52 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// APIKeyView handles API key entry
+// APIKeyView handles API key entry with validation
 type APIKeyView struct {
-	width       int
-	height      int
-	provider    *config.Provider
-	model       *config.Model
-	textInput   textinput.Model
-	buttonGroup *components.ButtonGroup
-	inputFocus  bool
-	error       string
+	width        int
+	height       int
+	provider     *config.Provider
+	model        *config.Model
+	textInput    textinput.Model
+	buttonGroup  *components.ButtonGroup
+	inputFocus   bool
+	error        string
+	validating   bool
+	validated    bool
+	header       *components.WizardHeader
+	spinner      *components.Spinner
+	retryCount   int
+	baseURLInput textinput.Model // For generic providers
+	showBaseURL  bool
 }
 
 // NewAPIKeyView creates a new API key view
 func NewAPIKeyView(provider *config.Provider, model *config.Model) *APIKeyView {
 	ti := textinput.New()
 	ti.Placeholder = "Enter API Key"
-	ti.CharLimit = 128
-	ti.Width = 40
+	ti.CharLimit = 256
+	ti.Width = 45
 	ti.EchoMode = textinput.EchoPassword
 	ti.EchoCharacter = '•'
 	ti.Focus()
 
+	urlInput := textinput.New()
+	urlInput.Placeholder = "https://your-api.com/v1"
+	urlInput.CharLimit = 256
+	urlInput.Width = 45
+
+	showBaseURL := provider != nil && provider.IsGeneric
+
 	return &APIKeyView{
-		provider:    provider,
-		model:       model,
-		textInput:   ti,
-		buttonGroup: components.NavigationButtons(false),
-		inputFocus:  true,
+		provider:     provider,
+		model:        model,
+		textInput:    ti,
+		buttonGroup:  components.NavigationButtons(false),
+		inputFocus:   true,
+		header:       components.NewWizardHeader(4, "Authentication"),
+		spinner:      components.NewSpinner(),
+		baseURLInput: urlInput,
+		showBaseURL:  showBaseURL,
 	}
 }
 
@@ -46,30 +64,49 @@ func NewAPIKeyView(provider *config.Provider, model *config.Model) *APIKeyView {
 func (v *APIKeyView) SetProvider(provider *config.Provider, model *config.Model) {
 	v.provider = provider
 	v.model = model
+	v.showBaseURL = provider != nil && provider.IsGeneric
 }
 
 // SetSize updates dimensions
 func (v *APIKeyView) SetSize(width, height int) {
 	v.width = width
 	v.height = height
+	v.header.SetWidth(width)
 }
 
 // Update handles text input updates
 func (v *APIKeyView) Update(msg interface{}) {
 	if v.inputFocus {
-		var cmd interface{}
-		v.textInput, cmd = v.textInput.Update(msg)
-		_ = cmd
+		v.textInput, _ = v.textInput.Update(msg)
 	}
+}
+
+// UpdateBaseURL handles base URL input updates
+func (v *APIKeyView) UpdateBaseURL(msg interface{}) {
+	v.baseURLInput, _ = v.baseURLInput.Update(msg)
 }
 
 // HandleTab toggles between input and buttons
 func (v *APIKeyView) HandleTab() {
-	v.inputFocus = !v.inputFocus
-	if v.inputFocus {
-		v.textInput.Focus()
+	if v.showBaseURL {
+		// Cycle: API key -> Base URL -> Buttons -> API key
+		if v.inputFocus && v.textInput.Focused() {
+			v.textInput.Blur()
+			v.baseURLInput.Focus()
+		} else if v.baseURLInput.Focused() {
+			v.baseURLInput.Blur()
+			v.inputFocus = false
+		} else {
+			v.inputFocus = true
+			v.textInput.Focus()
+		}
 	} else {
-		v.textInput.Blur()
+		v.inputFocus = !v.inputFocus
+		if v.inputFocus {
+			v.textInput.Focus()
+		} else {
+			v.textInput.Blur()
+		}
 	}
 }
 
@@ -97,25 +134,86 @@ func (v *APIKeyView) GetAPIKey() string {
 	return v.textInput.Value()
 }
 
+// GetBaseURL returns the entered base URL
+func (v *APIKeyView) GetBaseURL() string {
+	return v.baseURLInput.Value()
+}
+
 // GetButtonLabel returns selected button label
 func (v *APIKeyView) GetButtonLabel() string {
 	return v.buttonGroup.GetActiveLabel()
 }
 
-// Validate checks if the API key is valid
-func (v *APIKeyView) Validate() bool {
-	key := v.textInput.Value()
-	if len(key) < 10 {
-		v.error = "API key is too short"
-		return false
-	}
-	v.error = ""
-	return true
-}
-
 // GetTextInput returns the text input model
 func (v *APIKeyView) GetTextInput() *textinput.Model {
 	return &v.textInput
+}
+
+// SetValidating sets the validating state
+func (v *APIKeyView) SetValidating(validating bool) {
+	v.validating = validating
+}
+
+// SetValidated marks the key as validated
+func (v *APIKeyView) SetValidated() {
+	v.validated = true
+	v.validating = false
+	v.error = ""
+}
+
+// SetValidationError sets a validation error
+func (v *APIKeyView) SetValidationError(msg string) {
+	v.error = msg
+	v.validating = false
+	v.retryCount++
+}
+
+// TickSpinner advances the spinner
+func (v *APIKeyView) TickSpinner() {
+	v.spinner.Tick()
+}
+
+// Validate checks if the API key is valid (basic validation)
+func (v *APIKeyView) Validate() bool {
+	key := v.textInput.Value()
+
+	// Provider-specific validation
+	if v.provider != nil {
+		switch v.provider.ID {
+		case "openai":
+			if !strings.HasPrefix(key, "sk-") || len(key) < 20 {
+				v.error = "OpenAI keys start with 'sk-' and are at least 20 characters"
+				return false
+			}
+		case "anthropic":
+			if !strings.HasPrefix(key, "sk-ant-") && len(key) < 20 {
+				v.error = "Invalid Anthropic API key format"
+				return false
+			}
+		case "gemini":
+			if len(key) < 10 {
+				v.error = "API key is too short"
+				return false
+			}
+		default:
+			if len(key) < 8 {
+				v.error = "API key is too short"
+				return false
+			}
+		}
+	} else if len(key) < 8 {
+		v.error = "API key is too short"
+		return false
+	}
+
+	// Check base URL for generic providers
+	if v.showBaseURL && v.baseURLInput.Value() == "" {
+		v.error = "Base URL is required for generic providers"
+		return false
+	}
+
+	v.error = ""
+	return true
 }
 
 // Render the API key view
@@ -128,42 +226,33 @@ func (v *APIKeyView) Render() string {
 		sectionWidth = 80
 	}
 
-	// Page title
-	title := styles.PageTitle("Configuration", v.width)
+	// Wizard header
+	wizHeader := v.header.Render()
 
 	// Main content section
 	contentSection := v.renderContent(sectionWidth)
 
-	// Step indicator and buttons
-	stepIndicator := components.StepIndicator(3, 4)
+	// Buttons
 	buttons := v.buttonGroup.Render()
-
-	bottomBar := lipgloss.JoinHorizontal(
-		lipgloss.Center,
-		stepIndicator,
-		"          ",
-		buttons,
-	)
-
-	bottomBarCentered := lipgloss.NewStyle().
+	buttonsCentered := lipgloss.NewStyle().
 		Width(sectionWidth).
 		Align(lipgloss.Right).
-		Render(bottomBar)
+		Render(buttons)
 
 	// Footer
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.InputHelp())
+		Render(components.WizardInputHelp())
 
 	// Combine
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
-		title,
+		wizHeader,
 		"",
 		contentSection,
 		"",
-		bottomBarCentered,
+		buttonsCentered,
 	)
 
 	centered := lipgloss.Place(
@@ -178,9 +267,7 @@ func (v *APIKeyView) Render() string {
 }
 
 func (v *APIKeyView) renderContent(width int) string {
-	header := styles.SectionHeader.Render("Selected Values")
-
-	// Show selected provider and model
+	// Provider info
 	providerName := ""
 	modelName := ""
 	if v.provider != nil {
@@ -190,40 +277,75 @@ func (v *APIKeyView) renderContent(width int) string {
 		modelName = v.model.Name
 	}
 
-	// Table header
-	tableHeader := styles.TableHeader.Render(
-		fmt.Sprintf("%-12s %s", "Type", "Value"),
-	)
-	sep := styles.TableSeparator.Render(strings.Repeat("─", width-8))
+	header := styles.SectionHeader.Render("Enter API Credentials")
 
-	rows := []string{
-		fmt.Sprintf("%-12s %s", styles.Body.Render("provider"), styles.Body.Render(providerName)),
-		fmt.Sprintf("%-12s %s", styles.Body.Render("model"), styles.Body.Render(modelName)),
+	// Provider/model info
+	infoRows := []string{
+		styles.Label.Render("Provider: ") + styles.Body.Render(providerName),
+	}
+	if modelName != "" {
+		infoRows = append(infoRows, styles.Label.Render("Model:    ") + styles.Body.Render(modelName))
+	}
+
+	// Get API key URL hint
+	urlHint := ""
+	if v.provider != nil {
+		switch v.provider.ID {
+		case "openai":
+			urlHint = "Get key: https://platform.openai.com/api-keys"
+		case "anthropic":
+			urlHint = "Get key: https://platform.claude.com/settings/keys"
+		case "gemini":
+			urlHint = "Get key: https://aistudio.google.com/apikey"
+		case "skene":
+			urlHint = "Get key: https://www.skene.ai/login"
+		}
 	}
 
 	// API Key input
-	apiKeyLabel := styles.Label.Render("[API Key]:")
-	inputPrompt := styles.Muted.Render("> ")
+	apiKeyLabel := styles.Label.Render("API Key:")
 	inputField := v.textInput.View()
 
-	// Error message if any
-	errorMsg := ""
-	if v.error != "" {
-		errorMsg = "\n" + styles.Error.Render(v.error)
+	var elements []string
+	elements = append(elements, header, "")
+	elements = append(elements, infoRows...)
+	elements = append(elements, "")
+
+	if urlHint != "" {
+		elements = append(elements, styles.Muted.Render(urlHint), "")
 	}
 
-	content := lipgloss.JoinVertical(
-		lipgloss.Left,
-		header,
-		"",
-		tableHeader,
-		sep,
-		strings.Join(rows, "\n"),
-		"",
-		"",
-		apiKeyLabel+"     "+inputPrompt+inputField+errorMsg,
-	)
+	elements = append(elements, apiKeyLabel, inputField)
 
+	// Base URL field for generic providers
+	if v.showBaseURL {
+		elements = append(elements, "")
+		elements = append(elements, styles.Label.Render("Base URL:"))
+		elements = append(elements, v.baseURLInput.View())
+	}
+
+	// Validating state
+	if v.validating {
+		elements = append(elements, "")
+		elements = append(elements, v.spinner.SpinnerWithText("Validating API key..."))
+	}
+
+	// Error message
+	if v.error != "" {
+		elements = append(elements, "")
+		elements = append(elements, styles.Error.Render("✗ "+v.error))
+		if v.retryCount > 0 {
+			elements = append(elements, styles.Muted.Render(fmt.Sprintf("  Attempt %d", v.retryCount+1)))
+		}
+	}
+
+	// Validated message
+	if v.validated {
+		elements = append(elements, "")
+		elements = append(elements, styles.SuccessText.Render("✓ API key validated"))
+	}
+
+	content := lipgloss.JoinVertical(lipgloss.Left, elements...)
 	return styles.Box.Width(width).Render(content)
 }
 
@@ -233,6 +355,6 @@ func (v *APIKeyView) GetHelpItems() []components.HelpItem {
 		{Key: "enter", Desc: "submit key"},
 		{Key: "tab", Desc: "switch focus"},
 		{Key: "esc", Desc: "go back"},
-		{Key: "q", Desc: "quit"},
+		{Key: "ctrl+c", Desc: "quit"},
 	}
 }

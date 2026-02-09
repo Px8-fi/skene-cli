@@ -1,0 +1,26 @@
+{
+  "type": "system_check",
+  "title": "Python Version Issue",
+  "description": "Python 3.11+ is required but not found or outdated.",
+  "failed_checks": [
+    {
+      "name": "Python",
+      "message": "Python 3.9.6 found (requires 3.11+)",
+      "fix_command": "brew upgrade python",
+      "fix_url": "https://python.org/downloads/",
+      "required": true
+    },
+    {
+      "name": "uv",
+      "message": "uv not found",
+      "fix_command": "curl -LsSf https://astral.sh/uv/install.sh | sh",
+      "fix_url": "https://docs.astral.sh/uv/",
+      "required": false
+    }
+  ],
+  "timestamp": "2026-02-09T14:54:58+02:00",
+  "context": {
+    "all_passed": false,
+    "can_proceed": false
+  }
+}

@@ -1,6 +1,7 @@
 package views
 
 import (
+	"fmt"
 	"skene-terminal-v2/internal/services/syscheck"
 	"skene-terminal-v2/internal/tui/components"
 	"skene-terminal-v2/internal/tui/styles"
@@ -10,14 +11,16 @@ import (
 
 // SysCheckView displays system prerequisite check results
 type SysCheckView struct {
-	width       int
-	height      int
-	results     *syscheck.SystemCheckResult
-	spinner     *components.Spinner
-	checking    bool
-	showInstall bool // Show uv install option
-	header      *components.WizardHeader
-	buttonGroup *components.ButtonGroup
+	width          int
+	height         int
+	results        *syscheck.SystemCheckResult
+	spinner        *components.Spinner
+	checking       bool
+	showInstall    bool // Show uv install option
+	ideRequestSent bool // Track if IDE request was sent
+	ideRequestPath string // Path to the request file
+	header         *components.WizardHeader
+	buttonGroup    *components.ButtonGroup
 }
 
 // NewSysCheckView creates a new system check view
@@ -27,7 +30,7 @@ func NewSysCheckView() *SysCheckView {
 		checking:    true,
 		showInstall: false,
 		header:      components.NewWizardHeader(1, "System Check"),
-		buttonGroup: components.NewButtonGroup("Continue", "Install uv", "Quit"),
+		buttonGroup: components.NewButtonGroup("Continue", "Install uv", "Ask IDE", "Quit"),
 	}
 }
 
@@ -43,6 +46,12 @@ func (v *SysCheckView) SetResults(results *syscheck.SystemCheckResult) {
 	v.results = results
 	v.checking = false
 	v.showInstall = !results.AllPassed && results.UV.Status == syscheck.StatusFailed
+}
+
+// SetIDERequestSent marks that IDE request was sent
+func (v *SysCheckView) SetIDERequestSent(filePath string) {
+	v.ideRequestSent = true
+	v.ideRequestPath = filePath
 }
 
 // SetChecking sets the checking state
@@ -111,9 +120,13 @@ func (v *SysCheckView) Render() string {
 		if v.results != nil && v.results.CanProceed {
 			buttonsSection = v.buttonGroup.Render()
 		} else if v.results != nil && v.results.Python.Status == syscheck.StatusFailed {
-			// Only show quit if Python is missing
-			quitBtn := components.NewButtonGroup("Quit")
-			buttonsSection = quitBtn.Render()
+			// Show Ask IDE and Quit buttons when Python is missing
+			ideBtn := components.NewButtonGroup("Ask IDE", "Quit")
+			buttonsSection = ideBtn.Render()
+		} else if v.results != nil && !v.results.AllPassed {
+			// Show Ask IDE button when there are failures
+			ideBtn := components.NewButtonGroup("Ask IDE", "Quit")
+			buttonsSection = ideBtn.Render()
 		} else {
 			buttonsSection = v.buttonGroup.Render()
 		}
@@ -223,6 +236,15 @@ func (v *SysCheckView) renderStatus() string {
 
 	if v.results == nil {
 		return ""
+	}
+
+	// Show IDE request success message if sent
+	if v.ideRequestSent {
+		msg := styles.SuccessText.Render("✓ Request sent to IDE! Check Cursor chat or ask: 'help me fix the system check issues'")
+		if v.ideRequestPath != "" {
+			msg += "\n" + styles.Muted.Render(fmt.Sprintf("Details saved to: %s", v.ideRequestPath))
+		}
+		return msg
 	}
 
 	if v.results.AllPassed {

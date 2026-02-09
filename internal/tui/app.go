@@ -2,10 +2,13 @@ package tui
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"skene-terminal-v2/internal/game"
 	"skene-terminal-v2/internal/services/config"
+	"skene-terminal-v2/internal/services/ide"
 	"skene-terminal-v2/internal/services/syscheck"
 	"skene-terminal-v2/internal/tui/components"
 	"skene-terminal-v2/internal/tui/views"
@@ -72,6 +75,12 @@ type UVInstallDoneMsg struct {
 	Error error
 }
 
+// IDEHelpSentMsg is sent when IDE help request is sent
+type IDEHelpSentMsg struct {
+	Error    error
+	FilePath string
+}
+
 // LocalModelDetectMsg is sent with local model detection results
 type LocalModelDetectMsg struct {
 	Models []string
@@ -95,6 +104,7 @@ type App struct {
 	configMgr    *config.Manager
 	sysChecker   *syscheck.Checker
 	sysCheckDone bool
+	ideComm      *ide.Communicator
 
 	// Selected configuration
 	selectedProvider *config.Provider
@@ -150,10 +160,14 @@ func NewApp() *App {
 		configMgr.Config.OutputDir = "./skene-context"
 	}
 
+	// Get workspace path for IDE communication
+	workspacePath, _ := os.Getwd()
+
 	app := &App{
 		state:        StateWelcome,
 		configMgr:    configMgr,
 		sysChecker:   syscheck.NewChecker(),
+		ideComm:      ide.NewCommunicator(workspacePath),
 		welcomeView:  views.NewWelcomeView(),
 		providerView: views.NewProviderView(),
 		helpOverlay:  components.NewHelpOverlay(),
@@ -304,10 +318,48 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case UVInstallDoneMsg:
 		if msg.Error != nil {
-			a.showError(views.ErrUVInstallFailed)
+			// Check if it's an InstallUVError with alternatives
+			if installErr, ok := msg.Error.(*syscheck.InstallUVError); ok {
+				errorInfo := &views.ErrorInfo{
+					Code:       "UV_INSTALL_FAILED",
+					Title:      "uv Installation Failed",
+					Message:    installErr.Error(),
+					Suggestion: "Try one of these alternative installation methods:",
+					Severity:   views.SeverityWarning,
+					Retryable:  true,
+				}
+				// Add alternatives as additional context
+				if len(installErr.Alternatives) > 0 {
+					errorInfo.Suggestion += "\n\n" + strings.Join(installErr.Alternatives, "\n")
+				} else {
+					alternatives := a.sysChecker.GetAlternativeInstallCommands()
+					errorInfo.Suggestion += "\n\n" + strings.Join(alternatives, "\n")
+				}
+				a.showError(errorInfo)
+			} else {
+				a.showError(views.ErrUVInstallFailed)
+			}
 		} else {
 			// Re-run system checks
 			a.startSysCheck()
+		}
+
+	case IDEHelpSentMsg:
+		if msg.Error != nil {
+			// Show error if sending failed
+			a.showError(&views.ErrorInfo{
+				Code:       "IDE_COMM_FAILED",
+				Title:      "Failed to Send Request to IDE",
+				Message:    msg.Error.Error(),
+				Suggestion: "Please check your workspace permissions or try again.",
+				Severity:   views.SeverityWarning,
+				Retryable:  true,
+			})
+		} else {
+			// Success - update the view to show success message
+			if a.sysCheckView != nil {
+				a.sysCheckView.SetIDERequestSent(msg.FilePath)
+			}
 		}
 
 	case LocalModelDetectMsg:
@@ -411,6 +463,8 @@ func (a *App) handleSysCheckKeys(key string) tea.Cmd {
 			}
 		case "Install uv":
 			return a.startUVInstallCmd()
+		case "Ask IDE":
+			return a.sendIDEHelpRequest()
 		case "Quit":
 			return tea.Quit
 		}
@@ -952,6 +1006,19 @@ func (a *App) startUVInstallCmd() tea.Cmd {
 	return func() tea.Msg {
 		err := checker.InstallUV()
 		return UVInstallDoneMsg{Error: err}
+	}
+}
+
+func (a *App) sendIDEHelpRequest() tea.Cmd {
+	results := a.sysChecker.GetResults()
+	comm := a.ideComm
+	return func() tea.Msg {
+		err := comm.SendSystemCheckIssues(results)
+		if err != nil {
+			return IDEHelpSentMsg{Error: err, FilePath: ""}
+		}
+		filePath := comm.GetRequestFilePath()
+		return IDEHelpSentMsg{Error: nil, FilePath: filePath}
 	}
 }
 

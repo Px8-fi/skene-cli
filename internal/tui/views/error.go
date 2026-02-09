@@ -320,7 +320,7 @@ var (
 		Code:       "UV_INSTALL_FAILED",
 		Title:      "uv Installation Failed",
 		Message:    "Failed to install the uv package manager.",
-		Suggestion: "Try installing manually: curl -LsSf https://astral.sh/uv/install.sh | sh",
+		Suggestion: "Try one of these methods:\n1. Create directory first: mkdir -p ~/.local/bin\n2. Install via Homebrew: brew install uv\n3. Use custom path: curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR=~/bin sh",
 		Severity:   SeverityWarning,
 		Retryable:  true,
 	}

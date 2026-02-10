@@ -115,6 +115,9 @@ type AuthCallbackMsg struct {
 	Error  error
 }
 
+// authVerifiedMsg triggers the transition from verifying to success state
+type authVerifiedMsg struct{}
+
 // authSuccessTransitionMsg triggers the transition after showing auth success
 type authSuccessTransitionMsg struct{}
 
@@ -460,9 +463,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.configMgr.SetModel("skene-growth-v1")
 			}
 
-			// Show success briefly then transition
+			// Show "verifying" spinner first so the user sees activity
 			if a.authView != nil {
-				a.authView.SetAuthState(views.AuthStateSuccess)
+				a.authView.SetAuthState(views.AuthStateVerifying)
 			}
 
 			// Shutdown the callback server
@@ -471,11 +474,21 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.callbackServer = nil
 			}
 
-			// Transition to project directory after a brief delay
-			cmds = append(cmds, tea.Tick(1500*time.Millisecond, func(t time.Time) tea.Msg {
-				return authSuccessTransitionMsg{}
+			// After a fake verification delay, show success
+			cmds = append(cmds, tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+				return authVerifiedMsg{}
 			}))
 		}
+
+	case authVerifiedMsg:
+		// Show success state after the fake verification delay
+		if a.authView != nil {
+			a.authView.SetAuthState(views.AuthStateSuccess)
+		}
+		// Transition to project directory after showing success briefly
+		cmds = append(cmds, tea.Tick(1500*time.Millisecond, func(t time.Time) tea.Msg {
+			return authSuccessTransitionMsg{}
+		}))
 
 	case authSuccessTransitionMsg:
 		a.transitionToProjectDir()

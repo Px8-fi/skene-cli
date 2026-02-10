@@ -30,6 +30,7 @@ const (
 	AuthStateCountdown AuthState = iota
 	AuthStateBrowserOpen
 	AuthStateWaiting
+	AuthStateVerifying
 	AuthStateSuccess
 	AuthStateFallback
 )
@@ -127,6 +128,8 @@ func (v *AuthView) Render() string {
 		authContent = v.renderCountdown(sectionWidth)
 	case AuthStateBrowserOpen, AuthStateWaiting:
 		authContent = v.renderWaiting(sectionWidth)
+	case AuthStateVerifying:
+		authContent = v.renderVerifying(sectionWidth)
 	case AuthStateSuccess:
 		authContent = v.renderSuccess(sectionWidth)
 	default:
@@ -211,6 +214,23 @@ func (v *AuthView) renderWaiting(width int) string {
 		subMessage,
 		"",
 		url,
+	)
+
+	return styles.Box.
+		Width(width).
+		Align(lipgloss.Center).
+		Render(content)
+}
+
+func (v *AuthView) renderVerifying(width int) string {
+	message := v.spinner.SpinnerWithText("Verifying credentials...")
+	subMessage := styles.Muted.Render("Setting up your account")
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Center,
+		message,
+		"",
+		subMessage,
 	)
 
 	return styles.Box.

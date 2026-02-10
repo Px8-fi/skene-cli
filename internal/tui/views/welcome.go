@@ -19,7 +19,7 @@ type WelcomeView struct {
 // NewWelcomeView creates a new welcome view
 func NewWelcomeView() *WelcomeView {
 	return &WelcomeView{
-		anim: components.NewASCIIMotionWithDefaults(),
+		anim: components.NewASCIIMotion(styles.IsDarkBackground),
 	}
 }
 

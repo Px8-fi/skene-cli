@@ -30,10 +30,10 @@ run:
 	@echo "Running $(BINARY_NAME)..."
 	$(GORUN) ./cmd/skene
 
-# Development mode with live reload (requires air: go install github.com/cosmtrek/air@latest)
+# Development mode with live reload (requires air: go install github.com/air-verse/air@latest)
 dev:
-	@which air > /dev/null || (echo "Installing air..." && go install github.com/cosmtrek/air@latest)
-	air
+	@which air > /dev/null 2>&1 || (echo "Installing air..." && go install github.com/air-verse/air@latest)
+	$(shell go env GOPATH)/bin/air
 
 # Clean build artifacts
 clean:

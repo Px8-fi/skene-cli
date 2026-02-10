@@ -52,29 +52,30 @@ var (
 )
 
 // applyLightColors overrides the color palette with values that provide
-// good contrast on light terminal backgrounds while keeping the warm,
-// retro aesthetic.
+// strong contrast on light terminal backgrounds while keeping the warm,
+// retro aesthetic. Every color here must read clearly on a white (#FFF)
+// or near-white background.
 func applyLightColors() {
-	// Primary colors — inverted for readability on light backgrounds
-	Cream = lipgloss.Color("#7A4F2A")     // Dark warm brown (headings)
-	Sand = lipgloss.Color("#6B5340")      // Dark sand (subtitles)
-	Charcoal = lipgloss.Color("#FAF6F1")  // Warm white (button fill bg)
-	DarkGray = lipgloss.Color("#F0E8DE")  // Light warm gray
-	MidGray = lipgloss.Color("#8A7E72")   // Medium warm gray (muted text)
-	LightGray = lipgloss.Color("#6A5E52") // Readable gray
-	White = lipgloss.Color("#2A2420")     // Very dark brown (body text)
+	// Primary colors — dark, high-contrast tones
+	Cream = lipgloss.Color("#5C3310")     // Rich dark brown (headings, titles)
+	Sand = lipgloss.Color("#5A432E")      // Dark warm brown (subtitles)
+	Charcoal = lipgloss.Color("#F5F0EB")  // Off-white (button fill bg)
+	DarkGray = lipgloss.Color("#EDE6DD")  // Warm light gray (box bg)
+	MidGray = lipgloss.Color("#6B6058")   // Medium-dark warm gray (muted text)
+	LightGray = lipgloss.Color("#554A42") // Dark gray (secondary text)
+	White = lipgloss.Color("#1A1410")     // Near-black warm brown (body text)
 
-	// Accent colors — deeper tones for contrast on white
-	Amber = lipgloss.Color("#9A6318")   // Dark amber
-	Rust = lipgloss.Color("#8B5A2E")    // Dark rust
-	Coral = lipgloss.Color("#C43838")   // Darker coral
-	Success = lipgloss.Color("#2D7A25") // Darker green
-	Warning = lipgloss.Color("#A67B00") // Darker gold
+	// Accent colors — bold, saturated tones for visibility
+	Amber = lipgloss.Color("#8B4F00")   // Deep amber (primary accent)
+	Rust = lipgloss.Color("#7A4420")    // Dark rust
+	Coral = lipgloss.Color("#B22020")   // Strong red
+	Success = lipgloss.Color("#1B6B14") // Deep green
+	Warning = lipgloss.Color("#8A6500") // Dark gold
 
-	// Game colors — saturated but darker for light backgrounds
-	GameCyan = lipgloss.Color("#0A6E8F")
-	GameMagenta = lipgloss.Color("#B81A5E")
-	GameYellow = lipgloss.Color("#8F7000")
+	// Game colors — vivid and saturated for light backgrounds
+	GameCyan = lipgloss.Color("#075E7B")
+	GameMagenta = lipgloss.Color("#A01050")
+	GameYellow = lipgloss.Color("#7A5D00")
 }
 
 // ═══════════════════════════════════════════════════════════════════

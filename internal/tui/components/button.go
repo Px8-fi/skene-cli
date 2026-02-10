@@ -68,9 +68,9 @@ func NewButtonGroup(labels ...string) *ButtonGroup {
 	}
 }
 
-// SetActiveIndex changes which button is active
+// SetActiveIndex changes which button is active. Pass -1 to deactivate all.
 func (bg *ButtonGroup) SetActiveIndex(index int) {
-	if index < 0 || index >= len(bg.Buttons) {
+	if index >= len(bg.Buttons) {
 		return
 	}
 	for i := range bg.Buttons {

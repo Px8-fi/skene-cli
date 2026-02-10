@@ -488,8 +488,6 @@ func (a *App) handleWelcomeKeys(key string) tea.Cmd {
 		a.sysCheckView = views.NewSysCheckView()
 		a.sysCheckView.SetSize(a.width, a.height)
 		return a.startSysCheckCmd()
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
@@ -518,8 +516,6 @@ func (a *App) handleSysCheckKeys(key string) tea.Cmd {
 		a.sysCheckView.HandleLeft()
 	case "right", "l":
 		a.sysCheckView.HandleRight()
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
@@ -542,8 +538,6 @@ func (a *App) handleInstallMethodKeys(key string) tea.Cmd {
 		a.startInstalling()
 	case "esc":
 		a.state = StateSysCheck
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
@@ -560,8 +554,6 @@ func (a *App) handleInstallingKeys(key string) tea.Cmd {
 		}
 		a.game.SetSize(60, 20)
 		return game.GameTickCmd()
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
@@ -589,8 +581,6 @@ func (a *App) handleProviderKeys(msg tea.KeyMsg) tea.Cmd {
 		}
 	case "esc":
 		a.state = StateInstallMethod
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
@@ -618,8 +608,6 @@ func (a *App) handleModelKeys(msg tea.KeyMsg) tea.Cmd {
 		}
 	case "esc":
 		a.state = StateProviderSelect
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
@@ -637,8 +625,6 @@ func (a *App) handleAuthKeys(key string) tea.Cmd {
 		}
 	case "esc":
 		a.state = StateProviderSelect
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
@@ -712,14 +698,50 @@ func (a *App) handleLocalModelKeys(key string) tea.Cmd {
 		return a.detectLocalModels()
 	case "esc":
 		a.state = StateProviderSelect
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
 
 func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 	key := msg.String()
+
+	// Handle browsing mode
+	if a.projectDirView.IsBrowsing() {
+		if a.projectDirView.BrowseFocusOnList() {
+			// Focus is on the directory listing
+			switch key {
+			case "up", "k", "down", "j", "backspace", ".":
+				a.projectDirView.HandleBrowseKey(key)
+			case "enter":
+				a.projectDirView.HandleBrowseKey(key)
+			case "tab":
+				a.projectDirView.HandleBrowseTab()
+			case "esc":
+				a.projectDirView.StopBrowsing()
+			}
+		} else {
+			// Focus is on the browse buttons
+			switch key {
+			case "left", "h":
+				a.projectDirView.HandleBrowseLeft()
+			case "right", "l":
+				a.projectDirView.HandleBrowseRight()
+			case "enter":
+				btn := a.projectDirView.GetBrowseButtonLabel()
+				switch btn {
+				case "Select This Directory":
+					a.projectDirView.BrowseConfirm()
+				case "Cancel":
+					a.projectDirView.StopBrowsing()
+				}
+			case "tab":
+				a.projectDirView.HandleBrowseTab()
+			case "esc":
+				a.projectDirView.StopBrowsing()
+			}
+		}
+		return nil
+	}
 
 	if a.projectDirView.IsInputFocused() {
 		switch key {
@@ -746,6 +768,8 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 			switch btn {
 			case "Use Current":
 				a.projectDirView.UseCurrentDir()
+			case "Browse":
+				a.projectDirView.StartBrowsing()
 			case "Continue":
 				if a.projectDirView.IsValid() {
 					a.configMgr.SetProjectDir(a.projectDirView.GetProjectDir())
@@ -794,8 +818,6 @@ func (a *App) handleAnalysisConfigKeys(key string) tea.Cmd {
 		}
 	case "esc":
 		a.state = StateProjectDir
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
@@ -812,8 +834,6 @@ func (a *App) handleAnalyzingKeys(key string) tea.Cmd {
 		}
 		a.game.SetSize(60, 20)
 		return game.GameTickCmd()
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
@@ -834,8 +854,6 @@ func (a *App) handleResultsKeys(key string) tea.Cmd {
 		a.state = StateNextSteps
 		a.nextStepsView = views.NewNextStepsView()
 		a.nextStepsView.SetSize(a.width, a.height)
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
@@ -864,8 +882,6 @@ func (a *App) handleNextStepsKeys(key string) tea.Cmd {
 		}
 	case "esc":
 		a.state = StateResults
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
@@ -889,8 +905,6 @@ func (a *App) handleErrorKeys(key string) tea.Cmd {
 		}
 	case "L":
 		a.errorView.ToggleLogs()
-	case "q":
-		return tea.Quit
 	}
 	return nil
 }
@@ -910,7 +924,7 @@ func (a *App) handleGameKeys(msg tea.KeyMsg) tea.Cmd {
 		if a.game.IsGameOver() {
 			a.game.Restart()
 		}
-	case "esc", "q":
+	case "esc":
 		a.state = a.prevState
 	}
 	return nil

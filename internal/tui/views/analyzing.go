@@ -180,7 +180,11 @@ func (v *AnalyzingView) Render() string {
 }
 
 func (v *AnalyzingView) renderOverallProgress(width int) string {
-	barWidth := 50
+	// Bar fills the section: subtract " 100%" (5) and some margin (2)
+	barWidth := width - 7
+	if barWidth < 20 {
+		barWidth = 20
+	}
 	progress := v.GetOverallProgress()
 	filledWidth := int(float64(barWidth) * progress)
 	emptyWidth := barWidth - filledWidth

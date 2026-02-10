@@ -161,6 +161,11 @@ func (v *InstallMethodView) renderOptions(width int) string {
 
 		item := name + "\n" + desc + "\n" + detail
 		items = append(items, item)
+
+		// Add spacing between items (but not after last)
+		if i < len(v.options)-1 {
+			items = append(items, "")
+		}
 	}
 
 	list := lipgloss.JoinVertical(lipgloss.Left, items...)

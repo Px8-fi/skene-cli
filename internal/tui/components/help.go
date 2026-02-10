@@ -25,7 +25,7 @@ func NewHelpOverlay() *HelpOverlay {
 	return &HelpOverlay{
 		Items: []HelpItem{
 			{Key: "?", Desc: "toggle help"},
-			{Key: "q", Desc: "quit"},
+			{Key: "ctrl+c", Desc: "quit"},
 		},
 		Title:   "Help",
 		Visible: false,
@@ -84,7 +84,7 @@ func FooterHelp(items []HelpItem) string {
 func DefaultFooterHelp() string {
 	return FooterHelp([]HelpItem{
 		{Key: "?", Desc: "help"},
-		{Key: "q", Desc: "quit"},
+		{Key: "ctrl+c", Desc: "quit"},
 	})
 }
 
@@ -92,7 +92,7 @@ func DefaultFooterHelp() string {
 func IntroHelp() string {
 	return FooterHelp([]HelpItem{
 		{Key: "?", Desc: "help"},
-		{Key: "q", Desc: "quit"},
+		{Key: "ctrl+c", Desc: "quit"},
 	})
 }
 
@@ -102,7 +102,7 @@ func ConfigHelp() string {
 		{Key: "↑/↓", Desc: "navigate"},
 		{Key: "enter", Desc: "select"},
 		{Key: "?", Desc: "help"},
-		{Key: "q", Desc: "quit"},
+		{Key: "ctrl+c", Desc: "quit"},
 	})
 }
 
@@ -112,7 +112,7 @@ func NavHelp() string {
 		{Key: "←/→", Desc: "navigate"},
 		{Key: "enter", Desc: "confirm"},
 		{Key: "esc", Desc: "back"},
-		{Key: "q", Desc: "quit"},
+		{Key: "ctrl+c", Desc: "quit"},
 	})
 }
 
@@ -121,7 +121,7 @@ func InputHelp() string {
 	return FooterHelp([]HelpItem{
 		{Key: "enter", Desc: "submit"},
 		{Key: "esc", Desc: "back"},
-		{Key: "q", Desc: "quit"},
+		{Key: "ctrl+c", Desc: "quit"},
 	})
 }
 
@@ -129,7 +129,7 @@ func InputHelp() string {
 func LoadingHelp() string {
 	return FooterHelp([]HelpItem{
 		{Key: "g", Desc: "play game"},
-		{Key: "q", Desc: "quit"},
+		{Key: "ctrl+c", Desc: "quit"},
 	})
 }
 
@@ -139,7 +139,7 @@ func DashboardHelp() string {
 		{Key: "←/→", Desc: "tabs"},
 		{Key: "↑/↓", Desc: "scroll"},
 		{Key: "tab", Desc: "focus"},
-		{Key: "q", Desc: "quit"},
+		{Key: "ctrl+c", Desc: "quit"},
 	})
 }
 

@@ -74,9 +74,14 @@ func (v *APIKeyView) SetSize(width, height int) {
 	v.header.SetWidth(width)
 }
 
-// Update handles text input updates
+// Update handles text input updates, routing to whichever input is focused
 func (v *APIKeyView) Update(msg interface{}) {
-	if v.inputFocus {
+	if !v.inputFocus {
+		return
+	}
+	if v.baseURLInput.Focused() {
+		v.baseURLInput, _ = v.baseURLInput.Update(msg)
+	} else {
 		v.textInput, _ = v.textInput.Update(msg)
 	}
 }

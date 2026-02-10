@@ -195,6 +195,11 @@ func (v *ProviderView) renderProviderList(width int) string {
 		}
 
 		items = append(items, item)
+
+		// Add spacing between items (but not after last)
+		if i < endIdx-1 {
+			items = append(items, "")
+		}
 	}
 
 	// Scroll indicators

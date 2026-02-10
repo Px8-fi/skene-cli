@@ -170,7 +170,11 @@ func (v *InstallingView) Render() string {
 }
 
 func (v *InstallingView) renderProgress(width int) string {
-	barWidth := 40
+	// Bar fills the container: subtract border (2), padding (4), indent (2), " 100%" (5)
+	barWidth := width - 13
+	if barWidth < 20 {
+		barWidth = 20
+	}
 	var lines []string
 
 	for _, task := range v.tasks {

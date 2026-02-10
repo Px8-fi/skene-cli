@@ -9,19 +9,24 @@ A beautiful, production-ready terminal installer and configuration tool for [ske
 
 ## Features
 
+- 🧙 **Wizard-Guided Flow** - Step-by-step installation and configuration wizard
 - 🎨 **Beautiful Terminal UI** - Rich, animated interface with retro terminal aesthetics
-- 🔄 **Interactive Configuration** - Step-by-step guided setup
-- 🔐 **Secure API Key Entry** - Masked input with validation
-- 📊 **Progress Tracking** - Animated progress bars with elapsed time
+- ✅ **System Checks** - Automatic verification of Python 3.11+ and uv runtime
+- 🔄 **Installation Methods** - Choose between quick run (uvx) or full install (pip)
+- 🔐 **Multiple Auth Flows** - Skene magic link, API key entry, and local model detection
+- 🤖 **AI Provider Support** - OpenAI, Anthropic, Gemini, Skene, Ollama, LM Studio, and generic endpoints
+- 📊 **Progress Tracking** - Animated progress bars with elapsed time and phase tracking
 - 🎮 **Easter Egg Game** - Space shooter mini-game during loading
-- 📖 **Multi-tab Dashboard** - View growth plans, manifests, and contribution guides
+- 📖 **Tabbed Results Dashboard** - View growth plans, manifests, and product docs
 - ⌨️ **Fully Keyboard Navigable** - No mouse required
 - 🌐 **Cross-platform** - Works on macOS, Linux, and Windows
+- 🛡️ **Error Handling** - Robust error handling with retry mechanisms and detailed error messages
 
 ## Prerequisites
 
 - Go 1.22 or later
-- Python 3.8+ (for skene-growth installation)
+- Python 3.11+ (required for skene-growth)
+- `uv` runtime (will be installed automatically if missing)
 
 ## Quick Start
 
@@ -57,15 +62,36 @@ go build -o skene ./cmd/skene
 
 ## Usage
 
-### Application Flow
+### Wizard Flow
 
-1. **Welcome Screen** - Press `ENTER` to begin
-2. **Configuration Review** - View existing config, choose to edit or proceed
-3. **Provider Selection** - Choose your LLM provider (OpenAI, Gemini, Anthropic, etc.)
-4. **Model Selection** - Select the specific model for your provider
-5. **API Key Entry** - Enter your API key securely
-6. **Installation** - Watch progress as skene-growth is configured
-7. **Dashboard** - Review your setup and next steps
+The application guides you through a complete installation and analysis workflow:
+
+1. **Welcome Screen** - Animated welcome with ASCII art
+2. **System Checks** - Verifies Python 3.11+ and uv runtime (installs uv if needed)
+3. **Install Method** - Choose between:
+   - `uvx` (quick run, ephemeral environment)
+   - `pip` (full installation)
+4. **Installing** - Progress tracking for skene-growth installation
+5. **AI Provider Selection** - Choose from:
+   - Skene (with magic link authentication)
+   - OpenAI
+   - Anthropic (Claude)
+   - Gemini
+   - Local models (Ollama, LM Studio)
+   - Other OpenAI-compatible APIs
+6. **Model Selection** - Select the specific model for your provider
+7. **Authentication**:
+   - **Skene**: Magic link flow with browser redirect (falls back to manual API key)
+   - **Other providers**: Manual API key entry with validation
+   - **Local models**: Automatic detection and model selection
+8. **Project Directory** - Select or enter the project directory to analyze
+9. **Analysis Configuration** - Configure analysis settings or use recommended defaults
+10. **Analyzing** - Multi-phase analysis progress (scanning, feature detection, growth analysis)
+11. **Results Dashboard** - Tabbed view of:
+    - Growth Plan
+    - Growth Manifest
+    - Product Documentation
+12. **Next Steps** - Choose to generate roadmap, validate manifest, re-run analysis, or exit
 
 ### Keyboard Controls
 
@@ -74,9 +100,11 @@ go build -o skene ./cmd/skene
 | `↑/↓` or `j/k` | Navigate up/down |
 | `←/→` or `h/l` | Navigate left/right |
 | `Enter` | Confirm/Select |
-| `Esc` | Go back |
-| `Tab` | Switch focus area |
+| `Esc` | Go back to previous step |
+| `Tab` | Switch focus area (in multi-input views) |
+| `Space` | Toggle checkboxes/options |
 | `?` | Toggle help overlay |
+| `L` | Toggle error logs (in error view) |
 | `q` | Quit |
 | `g` | Play mini-game (during loading) |
 
@@ -96,37 +124,48 @@ go build -o skene ./cmd/skene
 skene-terminal-v2/
 ├── cmd/
 │   └── skene/
-│       └── main.go           # Application entry point
+│       └── main.go                    # Application entry point
 ├── internal/
 │   ├── tui/
-│   │   ├── app.go            # Main application model
+│   │   ├── app.go                     # Main wizard state machine
 │   │   ├── styles/
-│   │   │   └── styles.go     # Lip Gloss styling system
+│   │   │   └── styles.go              # Lip Gloss styling system
 │   │   ├── components/
-│   │   │   ├── button.go     # Button components
-│   │   │   ├── help.go       # Help overlay
-│   │   │   ├── logo.go       # ASCII logo animations
-│   │   │   └── progress.go   # Progress bars
+│   │   │   ├── button.go              # Button components
+│   │   │   ├── button_group.go        # Button group component
+│   │   │   ├── help.go                # Help overlay
+│   │   │   ├── logo.go                # ASCII logo animations
+│   │   │   ├── progress.go            # Progress bars
+│   │   │   ├── spinner.go             # Loading spinners
+│   │   │   └── wizard_header.go       # Wizard step progress header
 │   │   └── views/
-│   │       ├── intro.go      # Welcome screen
-│   │       ├── config.go     # Configuration review
-│   │       ├── provider.go   # Provider selection
-│   │       ├── model.go      # Model selection
-│   │       ├── auth.go       # Auth simulation
-│   │       ├── apikey.go     # API key entry
-│   │       ├── generating.go # Progress view
-│   │       ├── dashboard.go  # Final dashboard
-│   │       └── error.go      # Error handling
+│   │       ├── welcome.go              # Welcome screen
+│   │       ├── syscheck.go            # System checks view
+│   │       ├── install_method.go      # Install method selection
+│   │       ├── installing.go          # Installation progress
+│   │       ├── provider.go            # Provider selection
+│   │       ├── model.go               # Model selection
+│   │       ├── auth.go                # Skene magic link auth
+│   │       ├── apikey.go              # API key entry
+│   │       ├── local_model.go         # Local model detection
+│   │       ├── project_dir.go         # Project directory selection
+│   │       ├── analysis_config.go     # Analysis configuration
+│   │       ├── analyzing.go           # Analysis progress
+│   │       ├── results.go             # Results dashboard
+│   │       ├── next_steps.go          # Next steps menu
+│   │       └── error.go               # Error handling
 │   ├── services/
 │   │   ├── analyzer/
-│   │   │   └── analyzer.go   # Project analysis
+│   │   │   └── analyzer.go            # Project analysis
 │   │   ├── config/
-│   │   │   └── manager.go    # Configuration management
-│   │   └── installer/
-│   │       └── installer.go  # Installation engine
+│   │   │   └── manager.go             # Configuration management
+│   │   ├── installer/
+│   │   │   └── installer.go           # Installation engine
+│   │   └── syscheck/
+│   │       └── checker.go             # System prerequisite checks
 │   └── game/
-│       └── shooter.go        # Space shooter game
-├── designs/                   # Design reference images
+│       └── shooter.go                 # Space shooter game
+├── designs/                            # Design reference images
 ├── go.mod
 ├── go.sum
 ├── Makefile
@@ -137,13 +176,31 @@ skene-terminal-v2/
 
 ### State Management
 
-The application uses a finite state machine pattern:
+The application uses a finite state machine pattern implementing a complete wizard flow:
 
 ```
-Intro → Config → Provider → Model → APIKey → Generating → Dashboard
-                    ↓
-                  Auth (for Skene provider)
+Welcome → SystemCheck → InstallMethod → Installing → Provider → Model → Auth/APIKey → ProjectDir → AnalysisConfig → Analyzing → Results → NextSteps
+                                                                         ↓
+                                                                    LocalModel (if local provider)
 ```
+
+### Wizard States
+
+- **Welcome**: Initial animated welcome screen
+- **SystemCheck**: Verifies Python 3.11+ and uv runtime
+- **InstallMethod**: Choose between uvx and pip installation
+- **Installing**: Track installation progress with task status
+- **Provider**: Select AI provider (Skene, OpenAI, Anthropic, Gemini, Local, Generic)
+- **Model**: Select model for chosen provider
+- **Auth**: Skene magic link authentication flow
+- **APIKey**: Manual API key entry with validation
+- **LocalModel**: Detect and select local models (Ollama/LM Studio)
+- **ProjectDir**: Select project directory for analysis
+- **AnalysisConfig**: Configure analysis settings
+- **Analyzing**: Multi-phase analysis progress tracking
+- **Results**: Tabbed dashboard with growth plan, manifest, and docs
+- **NextSteps**: Post-analysis action menu
+- **Error**: Error display with retry options
 
 ### Views
 
@@ -151,6 +208,8 @@ Each view implements a consistent interface:
 - `SetSize(width, height int)` - Handle terminal resize
 - `Render() string` - Return the view content
 - `GetHelpItems() []HelpItem` - Context-specific help
+
+Views are organized by wizard step, with each step handling its own state, validation, and user interaction. The main `app.go` orchestrates state transitions and delegates to view-specific handlers.
 
 ### Styling
 
@@ -172,10 +231,23 @@ Example configuration:
   "provider": "gemini",
   "model": "gemini-3-flash-preview",
   "api_key": "your-api-key",
+  "base_url": "https://api.example.com/v1",
   "output_dir": "./skene-context",
   "verbose": true
 }
 ```
+
+### Supported Providers
+
+- **Skene**: `skene` (magic link auth or API key)
+- **OpenAI**: `openai` (requires API key)
+- **Anthropic**: `anthropic` or `claude` (requires API key)
+- **Gemini**: `gemini` (requires API key)
+- **Ollama**: `ollama` (local, no API key needed)
+- **LM Studio**: `lmstudio` (local, no API key needed)
+- **Generic**: `generic` (OpenAI-compatible endpoint, requires `base_url`)
+
+For generic providers, set `base_url` to your endpoint URL (e.g., `http://localhost:8000/v1` for local servers).
 
 ## Development
 
@@ -224,8 +296,24 @@ make build-all
 
 - [Bubble Tea](https://github.com/charmbracelet/bubbletea) - TUI framework
 - [Lip Gloss](https://github.com/charmbracelet/lipgloss) - Styling
-- [Bubbles](https://github.com/charmbracelet/bubbles) - UI components
-- [Glamour](https://github.com/charmbracelet/glamour) - Markdown rendering
+- [Bubbles](https://github.com/charmbracelet/bubbles) - UI components (textinput, viewport, etc.)
+- [pkg/browser](https://github.com/pkg/browser) - Browser opening for magic link auth
+
+## Error Handling
+
+The wizard includes robust error handling:
+
+- **System Check Failures**: Clear messages with installation instructions
+- **Installation Errors**: Retry options and detailed error logs
+- **Authentication Failures**: Validation hints and retry mechanisms
+- **Analysis Errors**: Phase-specific error messages with recovery options
+- **Network Errors**: Retry suggestions and fallback options
+
+All errors display in a dedicated error view with:
+- Clear error messages
+- Actionable suggestions
+- Retry/View Logs/Quit options
+- Expandable error logs (press `L`)
 
 ## Contributing
 

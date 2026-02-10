@@ -197,6 +197,11 @@ func (v *LocalModelView) renderModelList(width int) string {
 		} else {
 			items = append(items, styles.ListItem.Render(model))
 		}
+
+		// Add spacing between items (but not after last)
+		if i < len(v.models)-1 {
+			items = append(items, "")
+		}
 	}
 
 	list := lipgloss.JoinVertical(lipgloss.Left, items...)

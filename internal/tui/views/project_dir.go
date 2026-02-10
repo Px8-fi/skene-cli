@@ -22,6 +22,10 @@ type ProjectDirView struct {
 	validMsg    string
 	warningMsg  string
 	header      *components.WizardHeader
+	browsing         bool
+	dirBrowser       *components.DirBrowser
+	browseButtons    *components.ButtonGroup
+	browseFocusList  bool // true = focus on dir listing, false = focus on buttons
 }
 
 // NewProjectDirView creates a new project directory view
@@ -35,9 +39,13 @@ func NewProjectDirView() *ProjectDirView {
 	ti.Width = 50
 	ti.Focus()
 
+	bg := components.NewButtonGroup("Use Current", "Browse", "Continue")
+	// Input has focus initially, so no button should be highlighted
+	bg.SetActiveIndex(-1)
+
 	return &ProjectDirView{
 		textInput:   ti,
-		buttonGroup: components.NewButtonGroup("Use Current", "Browse", "Continue"),
+		buttonGroup: bg,
 		inputFocus:  true,
 		currentDir:  cwd,
 		isValid:     true,
@@ -65,8 +73,12 @@ func (v *ProjectDirView) HandleTab() {
 	v.inputFocus = !v.inputFocus
 	if v.inputFocus {
 		v.textInput.Focus()
+		// Deactivate buttons so none appear highlighted while typing
+		v.buttonGroup.SetActiveIndex(-1)
 	} else {
 		v.textInput.Blur()
+		// Activate the first button when moving focus to buttons
+		v.buttonGroup.SetActiveIndex(0)
 	}
 }
 
@@ -100,6 +112,117 @@ func (v *ProjectDirView) UseCurrentDir() {
 	v.textInput.SetValue(cwd)
 	v.currentDir = cwd
 	v.validatePath()
+}
+
+// StartBrowsing activates the directory browser from the current path
+func (v *ProjectDirView) StartBrowsing() {
+	startPath := v.GetProjectDir()
+	v.dirBrowser = components.NewDirBrowser(startPath)
+	// Give the browser a reasonable height based on available space
+	browserHeight := v.height - 16
+	if browserHeight < 6 {
+		browserHeight = 6
+	}
+	if browserHeight > 18 {
+		browserHeight = 18
+	}
+	v.dirBrowser.SetHeight(browserHeight)
+	v.browseButtons = components.NewButtonGroup("Select This Directory", "Cancel")
+	// Deactivate buttons initially -- focus starts on the listing
+	v.browseButtons.SetActiveIndex(-1)
+	v.browseFocusList = true
+	v.browsing = true
+	v.textInput.Blur()
+}
+
+// StopBrowsing exits the directory browser without selecting
+func (v *ProjectDirView) StopBrowsing() {
+	v.browsing = false
+	v.dirBrowser = nil
+	v.browseButtons = nil
+	v.inputFocus = false // return focus to buttons
+}
+
+// IsBrowsing returns true if the directory browser is active
+func (v *ProjectDirView) IsBrowsing() bool {
+	return v.browsing
+}
+
+// BrowseFocusOnList returns true if the dir listing has focus (not buttons)
+func (v *ProjectDirView) BrowseFocusOnList() bool {
+	return v.browseFocusList
+}
+
+// BrowseConfirm selects the current browsed directory and exits browsing
+func (v *ProjectDirView) BrowseConfirm() {
+	if v.dirBrowser == nil {
+		return
+	}
+	// Always use the directory we're currently inside
+	selectedPath := v.dirBrowser.CurrentPath()
+	v.textInput.SetValue(selectedPath)
+	v.currentDir = selectedPath
+	v.validatePath()
+	v.browsing = false
+	v.dirBrowser = nil
+	v.browseButtons = nil
+	v.inputFocus = false
+}
+
+// GetBrowseButtonLabel returns the active browse button label
+func (v *ProjectDirView) GetBrowseButtonLabel() string {
+	if v.browseButtons == nil {
+		return ""
+	}
+	return v.browseButtons.GetActiveLabel()
+}
+
+// HandleBrowseTab toggles focus between dir listing and buttons
+func (v *ProjectDirView) HandleBrowseTab() {
+	v.browseFocusList = !v.browseFocusList
+	if v.browseFocusList {
+		// Deactivate buttons when moving focus to listing
+		v.browseButtons.SetActiveIndex(-1)
+	} else {
+		// Activate first button when moving focus to buttons
+		v.browseButtons.SetActiveIndex(0)
+	}
+}
+
+// HandleBrowseLeft handles left key in browse button area
+func (v *ProjectDirView) HandleBrowseLeft() {
+	if !v.browseFocusList && v.browseButtons != nil {
+		v.browseButtons.Previous()
+	}
+}
+
+// HandleBrowseRight handles right key in browse button area
+func (v *ProjectDirView) HandleBrowseRight() {
+	if !v.browseFocusList && v.browseButtons != nil {
+		v.browseButtons.Next()
+	}
+}
+
+// HandleBrowseKey handles key input for the directory listing
+func (v *ProjectDirView) HandleBrowseKey(key string) {
+	if v.dirBrowser == nil {
+		return
+	}
+	switch key {
+	case "up", "k":
+		v.dirBrowser.CursorUp()
+	case "down", "j":
+		v.dirBrowser.CursorDown()
+	case "enter":
+		// If it's a directory, navigate into it
+		if v.dirBrowser.SelectedIsDir() {
+			v.dirBrowser.Enter()
+		}
+	case "backspace":
+		v.dirBrowser.GoUp()
+	case ".":
+		v.dirBrowser.ToggleHidden()
+	}
 }
 
 // GetProjectDir returns the entered/selected directory
@@ -180,6 +303,36 @@ func (v *ProjectDirView) Render() string {
 
 	// Wizard header
 	wizHeader := v.header.Render()
+
+	if v.browsing && v.dirBrowser != nil {
+		// Render the directory browser
+		browserSection := v.dirBrowser.Render(sectionWidth)
+
+		// Buttons (uses the real browseButtons group which tracks focus)
+		browseBtns := lipgloss.NewStyle().
+			Width(sectionWidth).
+			Align(lipgloss.Center).
+			Render(v.browseButtons.Render())
+
+		content := lipgloss.JoinVertical(
+			lipgloss.Center,
+			wizHeader,
+			"",
+			browserSection,
+			"",
+			browseBtns,
+		)
+
+		centered := lipgloss.Place(
+			v.width,
+			v.height-3,
+			lipgloss.Center,
+			lipgloss.Center,
+			content,
+		)
+
+		return centered
+	}
 
 	// Directory selection section
 	dirSection := v.renderDirSection(sectionWidth)

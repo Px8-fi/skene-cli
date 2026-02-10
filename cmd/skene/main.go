@@ -5,11 +5,16 @@ import (
 	"os"
 
 	"skene-terminal-v2/internal/tui"
+	"skene-terminal-v2/internal/tui/styles"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
+	// Detect terminal background (light vs dark) and apply the
+	// appropriate color theme. Must run before bubbletea takes over.
+	styles.Init()
+
 	// Create the application
 	app := tui.NewApp()
 

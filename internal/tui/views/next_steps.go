@@ -167,6 +167,11 @@ func (v *NextStepsView) renderActions(width int) string {
 
 		item := name + "\n" + desc
 		items = append(items, item)
+
+		// Add spacing between items (but not after last)
+		if i < len(v.actions)-1 {
+			items = append(items, "")
+		}
 	}
 
 	list := lipgloss.JoinVertical(lipgloss.Left, items...)

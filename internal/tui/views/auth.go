@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"net/url"
 	"skene-terminal-v2/internal/services/config"
 	"skene-terminal-v2/internal/tui/components"
 	"skene-terminal-v2/internal/tui/styles"
@@ -35,7 +36,7 @@ const (
 
 // NewAuthView creates a new auth view
 func NewAuthView(provider *config.Provider) *AuthView {
-	authURL := "https://www.skene.ai/login?=retrieve-api-key"
+	authURL := "https://www.skene.ai/auth"
 	if provider != nil && provider.AuthURL != "" {
 		authURL = provider.AuthURL
 	}
@@ -71,6 +72,20 @@ func (v *AuthView) GetCountdown() int {
 // GetAuthURL returns the auth URL
 func (v *AuthView) GetAuthURL() string {
 	return v.authURL
+}
+
+// SetAuthURL updates the auth URL (e.g., with callback parameter)
+func (v *AuthView) SetAuthURL(u string) {
+	v.authURL = u
+}
+
+// getDisplayURL returns a clean URL for display (without query params)
+func (v *AuthView) getDisplayURL() string {
+	parsed, err := url.Parse(v.authURL)
+	if err != nil {
+		return v.authURL
+	}
+	return fmt.Sprintf("%s://%s%s", parsed.Scheme, parsed.Host, parsed.Path)
 }
 
 // SetAuthState updates the auth state
@@ -149,7 +164,7 @@ func (v *AuthView) Render() string {
 
 func (v *AuthView) renderCountdown(width int) string {
 	message := styles.Body.Render("Opening browser for Skene authentication")
-	url := styles.Accent.Render(v.authURL)
+	url := styles.Accent.Render(v.getDisplayURL())
 
 	countdownText := fmt.Sprintf("Redirecting in %ds...", v.countdown)
 	countdownStyled := styles.Muted.Render(countdownText)
@@ -187,7 +202,7 @@ func (v *AuthView) renderCountdown(width int) string {
 func (v *AuthView) renderWaiting(width int) string {
 	message := v.spinner.SpinnerWithText("Waiting for authentication...")
 	subMessage := styles.Muted.Render("Complete the login in your browser")
-	url := styles.Accent.Render(v.authURL)
+	url := styles.Accent.Render(v.getDisplayURL())
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,

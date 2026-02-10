@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"skene-terminal-v2/internal/game"
+	"skene-terminal-v2/internal/services/auth"
 	"skene-terminal-v2/internal/services/config"
 	"skene-terminal-v2/internal/services/growth"
 	"skene-terminal-v2/internal/services/ide"
@@ -107,6 +108,16 @@ type LocalModelDetectMsg struct {
 	Error  error
 }
 
+// AuthCallbackMsg is sent when the API key is received from the external auth website
+type AuthCallbackMsg struct {
+	APIKey string
+	Model  string
+	Error  error
+}
+
+// authSuccessTransitionMsg triggers the transition after showing auth success
+type authSuccessTransitionMsg struct{}
+
 // ═══════════════════════════════════════════════════════════════════
 // APP MODEL
 // ═══════════════════════════════════════════════════════════════════
@@ -160,7 +171,8 @@ type App struct {
 	analysisStartTime time.Time
 
 	// Auth state
-	authCountdown int
+	authCountdown  int
+	callbackServer *auth.CallbackServer
 
 	// Error state
 	currentError *views.ErrorInfo
@@ -301,13 +313,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case CountdownMsg:
 		a.authCountdown = int(msg)
 		if a.authCountdown <= 0 {
-			// Open browser and wait
+			// Open browser and transition to waiting state
 			if a.authView != nil {
 				browser.OpenURL(a.authView.GetAuthURL())
-				a.authView.SetAuthState(views.AuthStateBrowserOpen)
+				a.authView.SetAuthState(views.AuthStateWaiting)
 			}
-			// Move to API key view for manual fallback after browser opens
-			a.transitionToAPIKey()
 		} else if a.authView != nil {
 			a.authView.SetCountdown(a.authCountdown)
 			cmds = append(cmds, countdown(a.authCountdown-1))
@@ -433,6 +443,42 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.sysCheckView.SetIDERequestSent(msg.FilePath)
 			}
 		}
+
+	case AuthCallbackMsg:
+		if msg.Error != nil {
+			// Auth failed, fall back to manual entry
+			if a.authView != nil {
+				a.authView.ShowFallback()
+			}
+		} else {
+			// Auth succeeded - set the API key and model
+			a.configMgr.SetAPIKey(msg.APIKey)
+			if msg.Model != "" {
+				a.configMgr.SetModel(msg.Model)
+			} else {
+				// Default Skene model
+				a.configMgr.SetModel("skene-growth-v1")
+			}
+
+			// Show success briefly then transition
+			if a.authView != nil {
+				a.authView.SetAuthState(views.AuthStateSuccess)
+			}
+
+			// Shutdown the callback server
+			if a.callbackServer != nil {
+				a.callbackServer.Shutdown()
+				a.callbackServer = nil
+			}
+
+			// Transition to project directory after a brief delay
+			cmds = append(cmds, tea.Tick(1500*time.Millisecond, func(t time.Time) tea.Msg {
+				return authSuccessTransitionMsg{}
+			}))
+		}
+
+	case authSuccessTransitionMsg:
+		a.transitionToProjectDir()
 
 	case LocalModelDetectMsg:
 		if a.localModelView != nil {
@@ -617,7 +663,11 @@ func (a *App) handleModelKeys(msg tea.KeyMsg) tea.Cmd {
 func (a *App) handleAuthKeys(key string) tea.Cmd {
 	switch key {
 	case "m":
-		// Skip to manual entry
+		// Skip to manual entry - shutdown callback server
+		if a.callbackServer != nil {
+			a.callbackServer.Shutdown()
+			a.callbackServer = nil
+		}
 		if a.authView != nil {
 			a.authView.ShowFallback()
 		}
@@ -626,6 +676,11 @@ func (a *App) handleAuthKeys(key string) tea.Cmd {
 			a.transitionToAPIKey()
 		}
 	case "esc":
+		// Clean up callback server
+		if a.callbackServer != nil {
+			a.callbackServer.Shutdown()
+			a.callbackServer = nil
+		}
 		a.state = StateProviderSelect
 	}
 	return nil
@@ -941,12 +996,47 @@ func (a *App) selectProvider() tea.Cmd {
 
 	// Branch based on provider type
 	if provider.ID == "skene" {
-		// Skene: go to magic link auth
+		// Skene: start callback server and open browser for auth
+		callbackServer, err := auth.NewCallbackServer()
+		if err != nil {
+			a.showError(&views.ErrorInfo{
+				Code:       "AUTH_SERVER_FAILED",
+				Title:      "Authentication Setup Failed",
+				Message:    err.Error(),
+				Suggestion: "Try again or use a different provider.",
+				Severity:   views.SeverityError,
+				Retryable:  true,
+			})
+			return nil
+		}
+
+		if err := callbackServer.Start(); err != nil {
+			a.showError(&views.ErrorInfo{
+				Code:       "AUTH_SERVER_FAILED",
+				Title:      "Authentication Setup Failed",
+				Message:    err.Error(),
+				Suggestion: "Try again or use a different provider.",
+				Severity:   views.SeverityError,
+				Retryable:  true,
+			})
+			return nil
+		}
+
+		a.callbackServer = callbackServer
+
+		// Build the auth URL with the callback parameter
+		authURL := provider.AuthURL
+		if authURL == "" {
+			authURL = "https://www.skene.ai/login"
+		}
+		authURL = fmt.Sprintf("%s?callback=%s", authURL, callbackServer.GetCallbackURL())
+
 		a.authView = views.NewAuthView(provider)
+		a.authView.SetAuthURL(authURL)
 		a.authView.SetSize(a.width, a.height)
 		a.authCountdown = 3
 		a.state = StateAuth
-		return countdown(3)
+		return tea.Batch(countdown(3), a.waitForAuthCallback())
 	}
 
 	if provider.IsLocal {
@@ -1167,6 +1257,32 @@ func (a *App) runNextStepCommand(cmdStr string) tea.Cmd {
 			return NextStepDoneMsg{Error: fmt.Errorf("exited with error")}
 		}
 		return NextStepDoneMsg{Error: nil}
+	}
+}
+
+func (a *App) waitForAuthCallback() tea.Cmd {
+	server := a.callbackServer
+	if server == nil {
+		return nil
+	}
+
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+
+		result, err := server.WaitForResult(ctx)
+		if err != nil {
+			return AuthCallbackMsg{Error: fmt.Errorf("authentication timed out")}
+		}
+
+		if result.Error != "" {
+			return AuthCallbackMsg{Error: fmt.Errorf("%s", result.Error)}
+		}
+
+		return AuthCallbackMsg{
+			APIKey: result.APIKey,
+			Model:  result.Model,
+		}
 	}
 }
 

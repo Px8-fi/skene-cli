@@ -1,9 +1,11 @@
 package tui
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -76,6 +78,16 @@ type AnalysisDoneMsg struct {
 // AnalysisPhaseMsg is sent to update analysis progress
 type AnalysisPhaseMsg struct {
 	Update growth.PhaseUpdate
+}
+
+// NextStepOutputMsg is sent when a next-step command produces output
+type NextStepOutputMsg struct {
+	Line string
+}
+
+// NextStepDoneMsg is sent when a next-step command finishes
+type NextStepDoneMsg struct {
+	Error error
 }
 
 // UVInstallDoneMsg is sent when uv installation completes
@@ -318,7 +330,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Retryable:  true,
 			})
 		} else {
-			// Move to provider selection
+			// Move to provider selection after a brief pause
 			a.state = StateProviderSelect
 			a.providerView.SetSize(a.width, a.height)
 		}
@@ -359,7 +371,21 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case AnalysisPhaseMsg:
 		if a.analyzingView != nil {
 			phase := int(msg.Update.Phase)
-			a.analyzingView.UpdatePhase(phase, msg.Update.Progress)
+			a.analyzingView.UpdatePhase(phase, msg.Update.Progress, msg.Update.Message)
+		}
+
+	case NextStepOutputMsg:
+		if a.analyzingView != nil {
+			a.analyzingView.UpdatePhase(-1, 0, msg.Line)
+		}
+
+	case NextStepDoneMsg:
+		if a.analyzingView != nil {
+			if msg.Error != nil {
+				a.analyzingView.SetCommandFailed(msg.Error.Error())
+			} else {
+				a.analyzingView.SetDone()
+			}
 		}
 
 	case UVInstallDoneMsg:
@@ -565,20 +591,8 @@ func (a *App) handleProviderKeys(msg tea.KeyMsg) tea.Cmd {
 		a.providerView.HandleUp()
 	case "down", "j":
 		a.providerView.HandleDown()
-	case "left", "h":
-		a.providerView.HandleLeft()
-	case "right", "l":
-		a.providerView.HandleRight()
 	case "enter":
-		if a.providerView.IsButtonFocused() {
-			if a.providerView.GetButtonLabel() == "Back" {
-				a.state = StateInstallMethod
-			} else {
-				return a.selectProvider()
-			}
-		} else {
-			return a.selectProvider()
-		}
+		return a.selectProvider()
 	case "esc":
 		a.state = StateInstallMethod
 	}
@@ -592,20 +606,8 @@ func (a *App) handleModelKeys(msg tea.KeyMsg) tea.Cmd {
 		a.modelView.HandleUp()
 	case "down", "j":
 		a.modelView.HandleDown()
-	case "left", "h":
-		a.modelView.HandleLeft()
-	case "right", "l":
-		a.modelView.HandleRight()
 	case "enter":
-		if a.modelView.IsButtonFocused() {
-			if a.modelView.GetButtonLabel() == "Back" {
-				a.state = StateProviderSelect
-			} else {
-				a.selectModel()
-			}
-		} else {
-			a.selectModel()
-		}
+		a.selectModel()
 	case "esc":
 		a.state = StateProviderSelect
 	}
@@ -632,46 +634,21 @@ func (a *App) handleAuthKeys(key string) tea.Cmd {
 func (a *App) handleAPIKeyKeys(msg tea.KeyMsg) tea.Cmd {
 	key := msg.String()
 
-	if a.apiKeyView.IsInputFocused() {
-		switch key {
-		case "enter":
-			if a.apiKeyView.Validate() {
-				a.configMgr.SetAPIKey(a.apiKeyView.GetAPIKey())
-				if a.apiKeyView.GetBaseURL() != "" {
-					a.configMgr.SetBaseURL(a.apiKeyView.GetBaseURL())
-				}
-				a.transitionToProjectDir()
+	switch key {
+	case "enter":
+		if a.apiKeyView.Validate() {
+			a.configMgr.SetAPIKey(a.apiKeyView.GetAPIKey())
+			if a.apiKeyView.GetBaseURL() != "" {
+				a.configMgr.SetBaseURL(a.apiKeyView.GetBaseURL())
 			}
-		case "tab":
-			a.apiKeyView.HandleTab()
-		case "esc":
-			a.navigateBackFromAPIKey()
-		default:
-			a.apiKeyView.Update(msg)
+			a.transitionToProjectDir()
 		}
-	} else {
-		switch key {
-		case "left", "h":
-			a.apiKeyView.HandleLeft()
-		case "right", "l":
-			a.apiKeyView.HandleRight()
-		case "enter":
-			if a.apiKeyView.GetButtonLabel() == "Back" {
-				a.navigateBackFromAPIKey()
-			} else {
-				if a.apiKeyView.Validate() {
-					a.configMgr.SetAPIKey(a.apiKeyView.GetAPIKey())
-					if a.apiKeyView.GetBaseURL() != "" {
-						a.configMgr.SetBaseURL(a.apiKeyView.GetBaseURL())
-					}
-					a.transitionToProjectDir()
-				}
-			}
-		case "tab":
-			a.apiKeyView.HandleTab()
-		case "esc":
-			a.navigateBackFromAPIKey()
-		}
+	case "tab":
+		a.apiKeyView.HandleTab()
+	case "esc":
+		a.navigateBackFromAPIKey()
+	default:
+		a.apiKeyView.Update(msg)
 	}
 	return nil
 }
@@ -825,15 +802,25 @@ func (a *App) handleAnalysisConfigKeys(key string) tea.Cmd {
 func (a *App) handleAnalyzingKeys(key string) tea.Cmd {
 	switch key {
 	case "g":
-		a.prevState = a.state
-		a.state = StateGame
-		if a.game == nil {
-			a.game = game.NewGame(60, 20)
-		} else {
-			a.game.Restart()
+		// Only allow game while running, not when done/failed
+		if a.analyzingView != nil && !a.analyzingView.IsDone() {
+			a.prevState = a.state
+			a.state = StateGame
+			if a.game == nil {
+				a.game = game.NewGame(60, 20)
+			} else {
+				a.game.Restart()
+			}
+			a.game.SetSize(60, 20)
+			return game.GameTickCmd()
 		}
-		a.game.SetSize(60, 20)
-		return game.GameTickCmd()
+	case "esc":
+		// Go back to next steps when command is done or failed
+		if a.analyzingView != nil && a.analyzingView.IsDone() {
+			a.state = StateNextSteps
+			a.nextStepsView = views.NewNextStepsView()
+			a.nextStepsView.SetSize(a.width, a.height)
+		}
 	}
 	return nil
 }
@@ -876,9 +863,18 @@ func (a *App) handleNextStepsKeys(key string) tea.Cmd {
 			return a.startAnalysis()
 		case "config":
 			a.state = StateProviderSelect
-		case "plan", "validate", "open":
-			// For now, show the command
-			return nil
+		case "plan", "validate":
+			// Run the command and show output
+			if action.Command != "" {
+				return a.runNextStepCommand(action.Command)
+			}
+		case "open":
+			// Open the output directory in the system file manager
+			outputDir := a.configMgr.Config.OutputDir
+			if outputDir == "" {
+				outputDir = "./skene-context"
+			}
+			browser.OpenURL(outputDir)
 		}
 	case "esc":
 		a.state = StateResults
@@ -1129,6 +1125,51 @@ func (a *App) startRealAnalysisCmd(p *tea.Program) tea.Cmd {
 	}
 }
 
+func (a *App) runNextStepCommand(cmdStr string) tea.Cmd {
+	// Switch to analyzing view to show the command output
+	a.analyzingView = views.NewAnalyzingView()
+	a.analyzingView.SetSize(a.width, a.height)
+	a.analysisStartTime = time.Now()
+	a.state = StateAnalyzing
+
+	p := a.program
+	return func() tea.Msg {
+		// Show the command being run
+		if p != nil {
+			p.Send(NextStepOutputMsg{Line: "$ " + cmdStr})
+			p.Send(NextStepOutputMsg{Line: ""})
+		}
+
+		parts := strings.Fields(cmdStr)
+		cmd := exec.CommandContext(context.Background(), parts[0], parts[1:]...)
+
+		// Combine stdout and stderr so all output is visible
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			return NextStepDoneMsg{Error: fmt.Errorf("failed to create pipe: %w", err)}
+		}
+		cmd.Stderr = cmd.Stdout
+
+		if err := cmd.Start(); err != nil {
+			return NextStepDoneMsg{Error: fmt.Errorf("command not found: %s", parts[0])}
+		}
+
+		// Stream output line by line
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if p != nil {
+				p.Send(NextStepOutputMsg{Line: line})
+			}
+		}
+
+		if err := cmd.Wait(); err != nil {
+			return NextStepDoneMsg{Error: fmt.Errorf("exited with error")}
+		}
+		return NextStepDoneMsg{Error: nil}
+	}
+}
+
 func (a *App) detectLocalModels() tea.Cmd {
 	providerID := ""
 	if a.selectedProvider != nil {
@@ -1227,9 +1268,9 @@ func (a *App) simulateAnalysisProgress() {
 			if progress > 1.0 {
 				progress = 1.0
 			}
-			a.analyzingView.UpdatePhase(i, progress)
+			a.analyzingView.UpdatePhase(i, progress, "")
 		} else if elapsed > phaseEnd {
-			a.analyzingView.UpdatePhase(i, 1.0)
+			a.analyzingView.UpdatePhase(i, 1.0, "")
 		}
 	}
 }

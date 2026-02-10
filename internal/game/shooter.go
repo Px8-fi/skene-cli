@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"math/rand"
 	"skene-terminal-v2/internal/tui/styles"
 	"strings"
@@ -45,23 +46,26 @@ type Game struct {
 	paused       bool
 	lastSpawn    time.Time
 	spawnRate    time.Duration
+	tickCount    int
+	enemySpeed   int // enemies move every N ticks
 }
 
 // NewGame creates a new game instance
 func NewGame(width, height int) *Game {
 	g := &Game{
-		width:     width,
-		height:    height,
-		enemies:   make([]*Entity, 0),
-		bullets:   make([]*Entity, 0),
-		powerUps:  make([]*Entity, 0),
-		score:     0,
-		lives:     3,
-		level:     1,
-		gameOver:  false,
-		paused:    false,
-		lastSpawn: time.Now(),
-		spawnRate: 800 * time.Millisecond,
+		width:      width,
+		height:     height,
+		enemies:    make([]*Entity, 0),
+		bullets:    make([]*Entity, 0),
+		powerUps:   make([]*Entity, 0),
+		score:      0,
+		lives:      3,
+		level:      1,
+		gameOver:   false,
+		paused:     false,
+		lastSpawn:  time.Now(),
+		spawnRate:  1200 * time.Millisecond,
+		enemySpeed: 3, // move every 3 ticks (150ms)
 	}
 
 	// Create player
@@ -98,7 +102,9 @@ func (g *Game) Update() {
 		return
 	}
 
-	// Move bullets
+	g.tickCount++
+
+	// Move bullets (every tick -- fast)
 	for _, b := range g.bullets {
 		if b.Alive {
 			b.Y--
@@ -108,12 +114,14 @@ func (g *Game) Update() {
 		}
 	}
 
-	// Move enemies
-	for _, e := range g.enemies {
-		if e.Alive {
-			e.Y++
-			if e.Y > g.height {
-				e.Alive = false
+	// Move enemies (slower -- every N ticks)
+	if g.tickCount%g.enemySpeed == 0 {
+		for _, e := range g.enemies {
+			if e.Alive {
+				e.Y++
+				if e.Y > g.height {
+					e.Alive = false
+				}
 			}
 		}
 	}
@@ -170,17 +178,17 @@ func (g *Game) spawnEnemy() {
 		sprite string
 		width  int
 	}{
-		{"◆", 1},
-		{"▼", 1},
-		{"●", 1},
-		{"◈", 1},
+		{"<█>", 3},
+		{"/▼\\", 3},
+		{"[●]", 3},
+		{"{◈}", 3},
 	}
 
 	et := enemyTypes[rand.Intn(len(enemyTypes))]
 
 	enemy := &Entity{
 		Type:   EntityEnemy,
-		X:      rand.Intn(g.width - 4) + 2,
+		X:      rand.Intn(g.width-6) + 2,
 		Y:      0,
 		Width:  et.width,
 		Height: 1,
@@ -205,12 +213,15 @@ func (g *Game) checkCollisions() {
 				b.Alive = false
 				e.Alive = false
 				g.score += 100
-				
+
 				// Level up every 1000 points
 				if g.score > 0 && g.score%1000 == 0 {
 					g.level++
-					if g.spawnRate > 300*time.Millisecond {
+					if g.spawnRate > 600*time.Millisecond {
 						g.spawnRate -= 100 * time.Millisecond
+					}
+					if g.enemySpeed > 2 {
+						g.enemySpeed--
 					}
 				}
 			}
@@ -266,7 +277,9 @@ func (g *Game) Restart() {
 	g.level = 1
 	g.gameOver = false
 	g.paused = false
-	g.spawnRate = 800 * time.Millisecond
+	g.spawnRate = 1200 * time.Millisecond
+	g.enemySpeed = 3
+	g.tickCount = 0
 	g.player.X = g.width / 2
 	g.player.Y = g.height - 3
 	g.player.Alive = true
@@ -292,14 +305,28 @@ func (g *Game) GetScore() int {
 	return g.score
 }
 
+// cellType tracks what entity occupies each cell for coloring
+type cellType int
+
+const (
+	cellEmpty  cellType = iota
+	cellStar
+	cellEnemy
+	cellBullet
+	cellPlayer
+)
+
 // Render draws the game
 func (g *Game) Render() string {
-	// Create game field
+	// Create game field with type info for coloring
 	field := make([][]rune, g.height)
+	fieldType := make([][]cellType, g.height)
 	for i := range field {
 		field[i] = make([]rune, g.width)
+		fieldType[i] = make([]cellType, g.width)
 		for j := range field[i] {
 			field[i][j] = ' '
+			fieldType[i][j] = cellEmpty
 		}
 	}
 
@@ -311,15 +338,17 @@ func (g *Game) Render() string {
 	for _, pos := range starPositions {
 		if pos.x < g.width && pos.y < g.height {
 			field[pos.y][pos.x] = '·'
+			fieldType[pos.y][pos.x] = cellStar
 		}
 	}
 
 	// Draw enemies
 	for _, e := range g.enemies {
-		if e.Alive && e.Y >= 0 && e.Y < g.height && e.X >= 0 && e.X < g.width {
+		if e.Alive && e.Y >= 0 && e.Y < g.height && e.X >= 0 {
 			for i, r := range e.Sprite {
-				if e.X+i < g.width {
+				if e.X+i >= 0 && e.X+i < g.width {
 					field[e.Y][e.X+i] = r
+					fieldType[e.Y][e.X+i] = cellEnemy
 				}
 			}
 		}
@@ -329,57 +358,77 @@ func (g *Game) Render() string {
 	for _, b := range g.bullets {
 		if b.Alive && b.Y >= 0 && b.Y < g.height && b.X >= 0 && b.X < g.width {
 			field[b.Y][b.X] = '│'
+			fieldType[b.Y][b.X] = cellBullet
 		}
 	}
 
 	// Draw player
 	if g.player.Alive && g.player.Y >= 0 && g.player.Y < g.height {
-		// Simple player drawing
 		if g.player.Y-1 >= 0 && g.player.X+1 < g.width {
 			field[g.player.Y-1][g.player.X+1] = '▲'
+			fieldType[g.player.Y-1][g.player.X+1] = cellPlayer
 		}
-		if g.player.X < g.width {
+		if g.player.X >= 0 && g.player.X < g.width {
 			field[g.player.Y][g.player.X] = '/'
+			fieldType[g.player.Y][g.player.X] = cellPlayer
 		}
 		if g.player.X+1 < g.width {
 			field[g.player.Y][g.player.X+1] = '█'
+			fieldType[g.player.Y][g.player.X+1] = cellPlayer
 		}
 		if g.player.X+2 < g.width {
 			field[g.player.Y][g.player.X+2] = '\\'
+			fieldType[g.player.Y][g.player.X+2] = cellPlayer
 		}
 	}
 
-	// Convert field to string
-	var lines []string
-	for _, row := range field {
-		lines = append(lines, string(row))
-	}
-
-	gameArea := strings.Join(lines, "\n")
-
-	// Style the game area
-	enemyStyle := lipgloss.NewStyle().Foreground(styles.GameMagenta)
+	// Color styles
+	enemyStyle := lipgloss.NewStyle().Foreground(styles.Coral)
 	bulletStyle := lipgloss.NewStyle().Foreground(styles.GameYellow)
 	playerStyle := lipgloss.NewStyle().Foreground(styles.GameCyan)
 	starStyle := lipgloss.NewStyle().Foreground(styles.MidGray)
 
-	// Apply colors (simplified - in real implementation would be per-character)
-	gameArea = starStyle.Render(gameArea)
+	// Render per-character with colors
+	var lines []string
+	for y := 0; y < g.height; y++ {
+		var lineBuilder strings.Builder
+		for x := 0; x < g.width; x++ {
+			ch := string(field[y][x])
+			switch fieldType[y][x] {
+			case cellEnemy:
+				lineBuilder.WriteString(enemyStyle.Render(ch))
+			case cellBullet:
+				lineBuilder.WriteString(bulletStyle.Render(ch))
+			case cellPlayer:
+				lineBuilder.WriteString(playerStyle.Render(ch))
+			case cellStar:
+				lineBuilder.WriteString(starStyle.Render(ch))
+			default:
+				lineBuilder.WriteString(ch)
+			}
+		}
+		lines = append(lines, lineBuilder.String())
+	}
+
+	gameArea := strings.Join(lines, "\n")
 
 	// Header with score
+	scoreStr := fmt.Sprintf("%d", g.score)
+	livesStr := strings.Repeat("♥", g.lives)
+	levelStr := fmt.Sprintf("%d", g.level)
+
 	header := lipgloss.JoinHorizontal(
 		lipgloss.Center,
 		styles.Accent.Render("SPACE SHOOTER"),
 		"  ",
 		styles.Body.Render("Score: "),
-		styles.Accent.Render(strings.Repeat("█", g.score/100)),
-		styles.Body.Render(string(rune('0'+g.score/100))),
+		styles.Accent.Render(scoreStr),
 		"  ",
 		styles.Body.Render("Lives: "),
-		styles.Accent.Render(strings.Repeat("♥", g.lives)),
+		styles.Error.Render(livesStr),
 		"  ",
 		styles.Body.Render("Level: "),
-		styles.Accent.Render(string(rune('0'+g.level))),
+		styles.Accent.Render(levelStr),
 	)
 
 	// Game box
@@ -410,7 +459,7 @@ func (g *Game) Render() string {
 			styles.Box.Render(
 				styles.Error.Render("GAME OVER\n\n")+
 					styles.Body.Render("Final Score: ")+
-					styles.Accent.Render(strings.Repeat("█", g.score/100)+"\n\n")+
+					styles.Accent.Render(scoreStr+"\n\n")+
 					styles.Muted.Render("Press R to restart • ESC to exit"),
 			),
 		)
@@ -427,14 +476,8 @@ func (g *Game) Render() string {
 	)
 
 	if overlay != "" {
-		// Overlay the message
 		result = overlay
 	}
-
-	// Apply entity-specific styling (for visibility)
-	_ = enemyStyle
-	_ = bulletStyle
-	_ = playerStyle
 
 	return result
 }

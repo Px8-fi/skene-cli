@@ -18,7 +18,7 @@ type AnalysisPhase struct {
 	Error    string
 }
 
-// AnalyzingView shows analysis progress with detailed phases
+// AnalyzingView shows analysis progress with live terminal output
 type AnalyzingView struct {
 	width       int
 	height      int
@@ -26,7 +26,10 @@ type AnalyzingView struct {
 	elapsedTime float64
 	header      *components.WizardHeader
 	spinner     *components.Spinner
+	terminal    *components.TerminalOutput
 	failed      bool
+	done        bool
+	failMessage string
 	currentIdx  int
 }
 
@@ -42,9 +45,10 @@ func NewAnalyzingView() *AnalyzingView {
 	}
 
 	return &AnalyzingView{
-		phases:  phases,
-		header:  components.NewWizardHeader(6, "Running Analysis"),
-		spinner: components.NewSpinner(),
+		phases:   phases,
+		header:   components.NewWizardHeader(6, "Running Analysis"),
+		spinner:  components.NewSpinner(),
+		terminal: components.NewTerminalOutput(14, 300),
 	}
 }
 
@@ -53,6 +57,15 @@ func (v *AnalyzingView) SetSize(width, height int) {
 	v.width = width
 	v.height = height
 	v.header.SetWidth(width)
+	// Adjust terminal visible lines based on available height
+	termHeight := height - 18
+	if termHeight < 6 {
+		termHeight = 6
+	}
+	if termHeight > 22 {
+		termHeight = 22
+	}
+	v.terminal.SetSize(width, termHeight)
 }
 
 // SetElapsedTime updates elapsed time
@@ -65,8 +78,8 @@ func (v *AnalyzingView) TickSpinner() {
 	v.spinner.Tick()
 }
 
-// UpdatePhase updates a phase's progress
-func (v *AnalyzingView) UpdatePhase(index int, progress float64) {
+// UpdatePhase updates a phase's progress and logs the message to terminal
+func (v *AnalyzingView) UpdatePhase(index int, progress float64, message string) {
 	if index >= 0 && index < len(v.phases) {
 		v.phases[index].Progress = progress
 		v.phases[index].Active = progress < 1.0
@@ -80,6 +93,31 @@ func (v *AnalyzingView) UpdatePhase(index int, progress float64) {
 			}
 		}
 	}
+	// Log the message to terminal output
+	if message != "" {
+		v.terminal.AddLine(message)
+	}
+}
+
+// SetDone marks the command as successfully completed
+func (v *AnalyzingView) SetDone() {
+	v.done = true
+	v.terminal.AddLine("✓ Done")
+}
+
+// SetCommandFailed marks the view as failed with the error visible in terminal
+func (v *AnalyzingView) SetCommandFailed(errMsg string) {
+	v.failed = true
+	v.failMessage = errMsg
+	if errMsg != "" {
+		v.terminal.AddLine("")
+		v.terminal.AddLine("ERROR: " + errMsg)
+	}
+}
+
+// IsDone returns true if the command completed (success or failure)
+func (v *AnalyzingView) IsDone() bool {
+	return v.done || v.failed
 }
 
 // SetPhaseError marks a phase as failed
@@ -88,6 +126,9 @@ func (v *AnalyzingView) SetPhaseError(index int, errMsg string) {
 		v.phases[index].Error = errMsg
 		v.phases[index].Active = false
 		v.failed = true
+	}
+	if errMsg != "" {
+		v.terminal.AddLine("ERROR: " + errMsg)
 	}
 }
 
@@ -130,20 +171,37 @@ func (v *AnalyzingView) Render() string {
 	// Wizard header
 	wizHeader := v.header.Render()
 
-	// Big title
-	title := styles.Accent.Render(`
- █████╗ ███╗   ██╗ █████╗ ██╗  ██╗   ██╗███████╗██╗███╗   ██╗ ██████╗
-██╔══██╗████╗  ██║██╔══██╗██║  ╚██╗ ██╔╝╚══███╔╝██║████╗  ██║██╔════╝
-███████║██╔██╗ ██║███████║██║   ╚████╔╝   ███╔╝ ██║██╔██╗ ██║██║  ███╗
-██╔══██║██║╚██╗██║██╔══██║██║    ╚██╔╝   ███╔╝  ██║██║╚██╗██║██║   ██║
-██║  ██║██║ ╚████║██║  ██║███████╗██║   ███████╗██║██║ ╚████║╚██████╔╝
-╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝╚═╝   ╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝`)
+	// Current phase status
+	var statusLine string
+	if v.failed {
+		statusLine = styles.Error.Render("✗ Failed")
+		if v.failMessage != "" {
+			statusLine += "\n" + styles.Muted.Render("  "+v.failMessage)
+		}
+	} else if v.done {
+		statusLine = styles.SuccessText.Render("✓ Complete")
+	} else if v.AllPhasesDone() {
+		statusLine = styles.SuccessText.Render("✓ Analysis complete")
+	} else {
+		currentPhase := ""
+		for _, p := range v.phases {
+			if p.Active {
+				currentPhase = p.Name
+				break
+			}
+		}
+		if currentPhase != "" {
+			statusLine = v.spinner.Render() + " " + styles.Body.Render(currentPhase)
+		} else {
+			statusLine = v.spinner.Render() + " " + styles.Body.Render("Running...")
+		}
+	}
 
 	// Overall progress bar
 	overallBar := v.renderOverallProgress(sectionWidth)
 
-	// Phase details
-	phaseSection := v.renderPhases(sectionWidth)
+	// Terminal output
+	termOutput := v.terminal.Render(sectionWidth)
 
 	// Elapsed
 	elapsed := styles.Muted.Render(fmt.Sprintf("Elapsed: %.1fs", v.elapsedTime))
@@ -159,11 +217,11 @@ func (v *AnalyzingView) Render() string {
 		lipgloss.Center,
 		wizHeader,
 		"",
-		title,
+		statusLine,
 		"",
 		overallBar,
 		"",
-		phaseSection,
+		termOutput,
 		"",
 		elapsed,
 	)
@@ -203,46 +261,14 @@ func (v *AnalyzingView) renderOverallProgress(width int) string {
 		Render(bar + " " + styles.Body.Render(percent))
 }
 
-func (v *AnalyzingView) renderPhases(width int) string {
-	var lines []string
-
-	for _, phase := range v.phases {
-		var icon string
-		var labelStyle lipgloss.Style
-
-		if phase.Error != "" {
-			icon = styles.Error.Render("✗")
-			labelStyle = styles.Error
-		} else if phase.Done {
-			icon = styles.SuccessText.Render("✓")
-			labelStyle = styles.Body
-		} else if phase.Active {
-			icon = v.spinner.Render()
-			labelStyle = styles.Body
-		} else {
-			icon = styles.Muted.Render("○")
-			labelStyle = styles.Muted
-		}
-
-		line := icon + " " + labelStyle.Render(phase.Name)
-
-		if phase.Active {
-			line += "  " + styles.Muted.Render(fmt.Sprintf("%0.0f%%", phase.Progress*100))
-		}
-
-		if phase.Error != "" {
-			line += "\n  " + styles.Error.Render(phase.Error)
-		}
-
-		lines = append(lines, line)
-	}
-
-	content := lipgloss.JoinVertical(lipgloss.Left, lines...)
-	return styles.Box.Width(width).Render(content)
-}
-
 // GetHelpItems returns context-specific help
 func (v *AnalyzingView) GetHelpItems() []components.HelpItem {
+	if v.done || v.failed {
+		return []components.HelpItem{
+			{Key: "esc", Desc: "go back"},
+			{Key: "ctrl+c", Desc: "quit"},
+		}
+	}
 	return []components.HelpItem{
 		{Key: "g", Desc: "play mini game"},
 		{Key: "ctrl+c", Desc: "quit"},

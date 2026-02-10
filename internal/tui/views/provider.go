@@ -17,8 +17,6 @@ type ProviderView struct {
 	selectedIndex int
 	scrollOffset  int
 	maxVisible    int
-	buttonGroup   *components.ButtonGroup
-	buttonFocused bool
 	header        *components.WizardHeader
 }
 
@@ -28,8 +26,6 @@ func NewProviderView() *ProviderView {
 		providers:     config.GetProviders(),
 		selectedIndex: 0,
 		maxVisible:    7,
-		buttonGroup:   components.NavigationButtons(false),
-		buttonFocused: false,
 		header:        components.NewWizardHeader(3, "AI Provider"),
 	}
 }
@@ -51,10 +47,6 @@ func (v *ProviderView) SetSize(width, height int) {
 
 // HandleUp moves selection up
 func (v *ProviderView) HandleUp() {
-	if v.buttonFocused {
-		v.buttonFocused = false
-		return
-	}
 	if v.selectedIndex > 0 {
 		v.selectedIndex--
 		if v.selectedIndex < v.scrollOffset {
@@ -65,33 +57,12 @@ func (v *ProviderView) HandleUp() {
 
 // HandleDown moves selection down
 func (v *ProviderView) HandleDown() {
-	if !v.buttonFocused && v.selectedIndex < len(v.providers)-1 {
+	if v.selectedIndex < len(v.providers)-1 {
 		v.selectedIndex++
 		if v.selectedIndex >= v.scrollOffset+v.maxVisible {
 			v.scrollOffset = v.selectedIndex - v.maxVisible + 1
 		}
-	} else if !v.buttonFocused {
-		v.buttonFocused = true
 	}
-}
-
-// HandleLeft moves button focus
-func (v *ProviderView) HandleLeft() {
-	if v.buttonFocused {
-		v.buttonGroup.Previous()
-	}
-}
-
-// HandleRight moves button focus
-func (v *ProviderView) HandleRight() {
-	if v.buttonFocused {
-		v.buttonGroup.Next()
-	}
-}
-
-// IsButtonFocused returns if buttons are focused
-func (v *ProviderView) IsButtonFocused() bool {
-	return v.buttonFocused
 }
 
 // GetSelectedProvider returns the selected provider
@@ -100,11 +71,6 @@ func (v *ProviderView) GetSelectedProvider() *config.Provider {
 		return &v.providers[v.selectedIndex]
 	}
 	return nil
-}
-
-// GetButtonLabel returns selected button label
-func (v *ProviderView) GetButtonLabel() string {
-	return v.buttonGroup.GetActiveLabel()
 }
 
 // Render the provider view
@@ -123,13 +89,6 @@ func (v *ProviderView) Render() string {
 	// Provider list section
 	listSection := v.renderProviderList(sectionWidth)
 
-	// Buttons
-	buttons := v.buttonGroup.Render()
-	buttonsCentered := lipgloss.NewStyle().
-		Width(sectionWidth).
-		Align(lipgloss.Right).
-		Render(buttons)
-
 	// Footer
 	footer := lipgloss.NewStyle().
 		Width(v.width).
@@ -142,8 +101,6 @@ func (v *ProviderView) Render() string {
 		wizHeader,
 		"",
 		listSection,
-		"",
-		buttonsCentered,
 	)
 
 	centered := lipgloss.Place(
@@ -173,7 +130,7 @@ func (v *ProviderView) renderProviderList(width int) string {
 
 	for i := v.scrollOffset; i < endIdx; i++ {
 		p := v.providers[i]
-		isSelected := i == v.selectedIndex && !v.buttonFocused
+		isSelected := i == v.selectedIndex
 
 		var item string
 		if isSelected {

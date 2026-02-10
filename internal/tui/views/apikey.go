@@ -18,8 +18,6 @@ type APIKeyView struct {
 	provider     *config.Provider
 	model        *config.Model
 	textInput    textinput.Model
-	buttonGroup  *components.ButtonGroup
-	inputFocus   bool
 	error        string
 	validating   bool
 	validated    bool
@@ -51,8 +49,6 @@ func NewAPIKeyView(provider *config.Provider, model *config.Model) *APIKeyView {
 		provider:     provider,
 		model:        model,
 		textInput:    ti,
-		buttonGroup:  components.NavigationButtons(false),
-		inputFocus:   true,
 		header:       components.NewWizardHeader(4, "Authentication"),
 		spinner:      components.NewSpinner(),
 		baseURLInput: urlInput,
@@ -76,9 +72,6 @@ func (v *APIKeyView) SetSize(width, height int) {
 
 // Update handles text input updates, routing to whichever input is focused
 func (v *APIKeyView) Update(msg interface{}) {
-	if !v.inputFocus {
-		return
-	}
 	if v.baseURLInput.Focused() {
 		v.baseURLInput, _ = v.baseURLInput.Update(msg)
 	} else {
@@ -86,52 +79,19 @@ func (v *APIKeyView) Update(msg interface{}) {
 	}
 }
 
-// UpdateBaseURL handles base URL input updates
-func (v *APIKeyView) UpdateBaseURL(msg interface{}) {
-	v.baseURLInput, _ = v.baseURLInput.Update(msg)
-}
-
-// HandleTab toggles between input and buttons
+// HandleTab toggles between API key and Base URL inputs
 func (v *APIKeyView) HandleTab() {
-	if v.showBaseURL {
-		// Cycle: API key -> Base URL -> Buttons -> API key
-		if v.inputFocus && v.textInput.Focused() {
-			v.textInput.Blur()
-			v.baseURLInput.Focus()
-		} else if v.baseURLInput.Focused() {
-			v.baseURLInput.Blur()
-			v.inputFocus = false
-		} else {
-			v.inputFocus = true
-			v.textInput.Focus()
-		}
+	if !v.showBaseURL {
+		return // Nothing to cycle to
+	}
+	// Toggle between API key and Base URL
+	if v.textInput.Focused() {
+		v.textInput.Blur()
+		v.baseURLInput.Focus()
 	} else {
-		v.inputFocus = !v.inputFocus
-		if v.inputFocus {
-			v.textInput.Focus()
-		} else {
-			v.textInput.Blur()
-		}
+		v.baseURLInput.Blur()
+		v.textInput.Focus()
 	}
-}
-
-// HandleLeft moves button focus
-func (v *APIKeyView) HandleLeft() {
-	if !v.inputFocus {
-		v.buttonGroup.Previous()
-	}
-}
-
-// HandleRight moves button focus
-func (v *APIKeyView) HandleRight() {
-	if !v.inputFocus {
-		v.buttonGroup.Next()
-	}
-}
-
-// IsInputFocused returns if input is focused
-func (v *APIKeyView) IsInputFocused() bool {
-	return v.inputFocus
 }
 
 // GetAPIKey returns the entered API key
@@ -142,11 +102,6 @@ func (v *APIKeyView) GetAPIKey() string {
 // GetBaseURL returns the entered base URL
 func (v *APIKeyView) GetBaseURL() string {
 	return v.baseURLInput.Value()
-}
-
-// GetButtonLabel returns selected button label
-func (v *APIKeyView) GetButtonLabel() string {
-	return v.buttonGroup.GetActiveLabel()
 }
 
 // GetTextInput returns the text input model
@@ -237,13 +192,6 @@ func (v *APIKeyView) Render() string {
 	// Main content section
 	contentSection := v.renderContent(sectionWidth)
 
-	// Buttons
-	buttons := v.buttonGroup.Render()
-	buttonsCentered := lipgloss.NewStyle().
-		Width(sectionWidth).
-		Align(lipgloss.Right).
-		Render(buttons)
-
 	// Footer
 	footer := lipgloss.NewStyle().
 		Width(v.width).
@@ -256,8 +204,6 @@ func (v *APIKeyView) Render() string {
 		wizHeader,
 		"",
 		contentSection,
-		"",
-		buttonsCentered,
 	)
 
 	centered := lipgloss.Place(
@@ -356,9 +302,16 @@ func (v *APIKeyView) renderContent(width int) string {
 
 // GetHelpItems returns context-specific help
 func (v *APIKeyView) GetHelpItems() []components.HelpItem {
+	if v.showBaseURL {
+		return []components.HelpItem{
+			{Key: "enter", Desc: "submit"},
+			{Key: "tab", Desc: "switch field"},
+			{Key: "esc", Desc: "go back"},
+			{Key: "ctrl+c", Desc: "quit"},
+		}
+	}
 	return []components.HelpItem{
-		{Key: "enter", Desc: "submit key"},
-		{Key: "tab", Desc: "switch focus"},
+		{Key: "enter", Desc: "submit"},
 		{Key: "esc", Desc: "go back"},
 		{Key: "ctrl+c", Desc: "quit"},
 	}

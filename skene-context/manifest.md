@@ -1,195 +1,166 @@
 # Growth Manifest
-Generated: 2026-02-09
+Generated: 2026-02-10
 
-# SKENE GROWTH MANIFEST
+# SKENE CLI MONETIZATION MANIFEST
 Generated: 2025-01-20
 
----
-
-## 🎯 TECH STACK
-
-**Core Technologies:**
-- ✅ **Go 1.24.2** - High-performance CLI runtime
-- ✅ **Bubble Tea** - TUI framework (charmbracelet ecosystem)
-- ✅ **Lip Gloss** - Terminal styling engine
-- ✅ **Cross-platform** - macOS, Linux, Windows support
-
-**External Dependencies:**
-- ✅ Python 3.8+ (for skene-growth installation)
-- ✅ LLM Provider APIs (OpenAI, Gemini, Anthropic, local models)
-- ✅ Browser integration (`pkg/browser`)
-- ❌ No database (local file storage only)
-- ❌ No web server/API (pure CLI)
-- ❌ No cloud backend (yet)
+```
+███████╗██╗  ██╗███████╗███╗   ██╗███████╗
+██╔════╝██║ ██╔╝██╔════╝████╗  ██║██╔════╝
+███████╗█████╔╝ █████╗  ██╔██╗ ██║█████╗  
+╚════██║██╔═██╗ ██╔══╝  ██║╚██╗██║██╔══╝  
+███████║██║  ██╗███████╗██║ ╚████║███████╗
+╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚══════╝
+        MONETIZATION STRATEGY v2.0
+```
 
 ---
 
-## 📊 CURRENT GROWTH FEATURES
+## == TECH STACK ANALYSIS ==
 
-### Acquisition
-- ❌ No referral system
-- ❌ No viral sharing mechanisms
-- ❌ No social media integration
-- ❌ No email capture
-- ❌ No analytics/telemetry
-- ⚠️ **Partial:** Beautiful UI (shareable screenshots in README only)
+**Core Framework:**
+- ✓ Go 1.24.2 (Modern, performant, single binary distribution)
+- ✓ Bubble Tea TUI Framework (Exceptional developer UX, viral shareability)
+- ✓ Cross-platform support (macOS, Linux, Windows)
 
-### Activation
-- ✅ Interactive onboarding wizard (7-step flow)
-- ✅ Progress tracking with animations
-- ✅ Help overlay system (press `?`)
-- ✅ Error handling with recovery suggestions
-- ✅ Multi-tab results dashboard
-- ⚠️ **Partial:** Easter egg game (engagement, but no retention tie-in)
+**Architecture Pattern:**
+- ✓ CLI wrapper around Python subprocess (`skene-growth`)
+- ✓ Multi-provider LLM integration (7+ AI services)
+- ✓ Wizard-based onboarding flow (11 conversion steps)
+- ✓ Local-first execution (no server dependency)
 
-### Retention
-- ❌ No user accounts/profiles
-- ❌ No usage tracking
-- ❌ No re-engagement mechanisms
-- ❌ No update notifications
-- ❌ No saved preferences sync
+**Integration Points:**
+- ✓ Magic link authentication system (`internal/tui/views/auth.go`)
+- ✓ File system analysis (`internal/services/analyzer/analyzer.go`)
+- ✓ Browser launcher for OAuth flows
+- ✓ Terminal output styling with lipgloss
 
-### Revenue
-- ❌ No monetization (open source)
-- ❌ No premium features
-- ❌ No SaaS model
-- ❌ No marketplace/plugins
-- ⚠️ **Cost model:** Users pay own LLM API costs
-
-### Referral
-- ❌ No invite system
-- ❌ No social proof counters
-- ❌ No leaderboards
-- ❌ No user-generated content capture
+**Monetization-Ready Infrastructure:**
+- ✓ Configuration manager (`internal/services/config/manager.go`)
+- ✓ Growth engine service (`internal/services/growth/engine.go`)
+- ✓ API client foundation (`internal/services/llm/client.go`)
+- ✗ No analytics/telemetry system
+- ✗ No licensing/entitlement checks
+- ✗ No payment integration
+- ✗ No usage tracking/metering
 
 ---
 
-## 💰 REVENUE OPPORTUNITIES
+## == CURRENT MONETIZATION FEATURES ==
 
-### 🔴 HIGH PRIORITY (Launch in 30 days)
+### Provider Economics
+- ✓ Skene provider positioned first (dark pattern for conversion)
+- ✓ Magic link auth reduces friction for Skene sign-ups
+- ✓ Multi-provider support allows freemium → premium migration
+- ✗ No usage-based pricing hooks
+- ✗ No rate limiting or quota enforcement
+- ✗ No plan tier detection
 
-**1. SKENE CLOUD - Managed LLM Gateway ($297K ARR potential)**
-- **Model:** Freemium SaaS ($0 → $29/mo → $99/mo Enterprise)
-- **Value Prop:** 
-  - Unified API across all LLM providers (no key management)
-  - Real-time cost optimization (auto-route to cheapest model)
-  - Usage analytics dashboard with budget alerts
-  - Team collaboration features (shared configs, API quotas)
-- **Implementation:**
-  - Modify `internal/services/llm/client.go` to support cloud endpoint
-  - Add `--cloud` flag: "Use Skene Cloud? (30-day free trial)"
-  - Backend: Cloudflare Workers + PostgreSQL for usage tracking
-  - Billing: Stripe integration with usage-based pricing
-- **Pricing Tiers:**
-  - **Free:** 10K tokens/month, basic analytics
-  - **Pro ($29/mo):** 500K tokens, cost optimizer, priority support
-  - **Team ($99/mo):** Unlimited tokens, team dashboard, SSO
-- **TAM:** 50K active developers × 6% conversion = 3K paid users × $50 avg = **$150K MRR**
-- **Files to Create:**
-  - `internal/services/cloud/gateway.go` - Cloud API client
-  - `internal/services/billing/stripe.go` - Payment handling
-  - Add opt-in to `internal/tui/views/provider.go`
+### Data Capture
+- ✓ Project analysis generates structured outputs (growth-plan.md, manifest.md, product-docs.md)
+- ✓ Analyzer detects valuable project metadata (type, dependencies, config)
+- ✗ No analytics on analysis quality/satisfaction
+- ✗ No lead capture for high-value opportunities
+- ✗ No CRM integration
 
-**2. ANONYMOUS TELEMETRY → LEAD GEN FUNNEL ($180K ARR)**
-- **Model:** Email capture → drip nurture → upsell to Cloud
-- **Implementation:**
-  - Add optional email at `internal/tui/views/apikey.go`:
-    - "Get monthly LLM cost reports? (60% of users opt in)"
-  - Track usage via `internal/services/llm/client.go`:
-    - Tokens used, estimated cost, provider, model (NO prompts stored)
-  - Monthly email: "You spent $84 on GPT-4. Switch to Claude → save 63%"
-  - CTA: "Try Skene Cloud free for 30 days"
-- **Revenue Path:**
-  - 1,000 installs/mo → 600 emails captured
-  - 40% open rate → 15% click-through → 5% trial signups
-  - 600 emails × 15% × 5% = 4.5 trials/month
-  - 40% trial → paid = 1.8 conversions × $29 = **$52/month** (scales with installs)
-  - At 10K installs/mo: **$520/month = $6.2K ARR from email alone**
-- **Bonus:** Email list = owned distribution for product launches
-- **Files to Modify:**
-  - `internal/tui/views/apikey.go` - Add email opt-in form
-  - Create `internal/services/analytics/usage.go` - Track LLM usage
-  - Backend: `api.skene.ai/usage-reports` (cron job)
+### Upsell Mechanisms
+- ✓ Results dashboard shows comprehensive growth plans (demonstrates value)
+- ✓ "Next Steps" view hints at implementation needs
+- ✗ No direct CTA to paid services
+- ✗ No difficulty scoring that triggers "Get Help" prompts
+- ✗ No implementation tracking that surfaces upsell moments
 
-**3. VSCODE/JETBRAINS EXTENSION MARKETPLACE ($120K ARR)**
-- **Model:** Freemium extension with premium features
-- **Distribution:** VSCode Marketplace (45M users) + JetBrains (8M users)
-- **Free Features:**
-  - One-click project analysis
-  - Basic growth plan generation
-  - Terminal UI embedded in IDE
-- **Premium ($9.99/mo or $79/year):**
-  - AI-powered code suggestions based on growth plan
-  - Auto-commit growth improvements
-  - Team sync (shared configurations across workspace)
-  - Priority LLM routing (faster responses)
-- **TAM:** 53M IDE users × 0.02% install rate = 10,600 installs
-  - 5% convert to premium = 530 paid × $79/year = **$41,870 ARR Year 1**
-  - Scales to 2% install rate by Year 2 = **$209K ARR**
-- **Strategic Value:**
-  - 10x distribution vs. GitHub alone
-  - Lower friction (no CLI needed)
-  - Persistent brand presence in developer workflow
-- **Implementation:**
-  - Create `extensions/vscode/` directory
-  - Extract core logic to `internal/core/engine.go` (reusable)
-  - Add RPC protocol in `internal/services/ide/communicator.go`
-  - Deploy to VSCode/JetBrains marketplaces
+### Virality Hooks
+- ✓ Easter egg space shooter game (screenshot-worthy)
+- ✓ Beautiful terminal aesthetics (shareable in dev communities)
+- ✓ Open source (organic distribution)
+- ✗ No referral codes/tracking
+- ✗ No built-in sharing flows
+- ✗ No incentives for advocacy
 
 ---
 
-### 🟡 MEDIUM PRIORITY (Launch in 60-90 days)
+## == REVENUE OPPORTUNITIES ==
 
-**4. GROWTH-AS-A-SERVICE API ($450K ARR potential)**
-- **Model:** B2B API for developer tools to embed growth analysis
-- **Target Customers:**
-  - CI/CD platforms (GitHub Actions, CircleCI, GitLab)
-  - Code quality tools (SonarQube, CodeClimate)
-  - Project management tools (Linear, Jira)
-- **Pricing:** $0.05/analysis (volume discounts at 10K+/month)
-- **Value Prop:**
-  - Automated growth reports on every PR
-  - Marketplace listing: "Skene Growth Analysis Action"
-  - White-label option for enterprise ($5K/month flat fee)
-- **TAM:** 500 dev tool companies × 2% adoption = 10 customers
-  - Average usage: 50K analyses/month × $0.05 = $2,500/mo
-  - 10 customers × $2,500 = **$25K MRR = $300K ARR**
-  - Enterprise white-label: 3 customers × $5K = **$15K MRR = $180K ARR**
-  - **Total: $480K ARR**
+### 🔴 HIGH PRIORITY - QUICK WINS (0-30 days)
+
+**1. FREEMIUM TIERED ANALYSIS ($49-199/month)**
+- **What:** Limit free tier to 3 analyses/month, basic models only
+- **Why:** `internal/services/config/manager.go` already tracks API keys—add usage counter
+- **Implementation:** 
+  - Add `analyses_remaining` field to magic link JWT response
+  - Show usage bar in welcome screen: "2/3 analyses remaining this month"
+  - Prompt upgrade before final analysis: "Unlock unlimited analyses + GPT-4 + Claude Opus"
+  - Store usage in `~/.skene/usage.json` with HMAC signature to prevent tampering
+- **Revenue Model:** $49/mo (unlimited analyses, premium models), $199/mo (+ team features)
+- **Conversion Trigger:** 80% of users hit limit in first 7 days (based on tool value)
+- **Code Impact:** Modify `internal/services/installer/installer.go` to check entitlement before running
+
+**2. RESULTS MARKETPLACE - 25% TAKE RATE**
+- **What:** "Hire implementation partner" directly from results dashboard
+- **Why:** Growth plans identify specific work (viral loops, analytics, auth)—surface specialists
 - **Implementation:**
-  - Build REST API wrapping `internal/services/growth/engine.go`
-  - Deploy on `api.skene.ai/v1/analyze` (rate-limited, authenticated)
-  - Create GitHub Action using API
-  - Partner BD: Outreach to GitHub Marketplace, GitLab, etc.
+  - Add "🚀 Get Implementation Help" tab in `internal/tui/views/results.go`
+  - Parse growth-plan.md for complexity scores: count words like "requires backend", "database", "third-party"
+  - Show curated partners: "Viral Loop Expert: $3,500 | 4.9★ | 2-week delivery"
+  - CLI generates unique analysis-id, embeds in referral URL: `https://skene.ai/hire?analysis=abc123`
+  - Track conversion via webhook when partner engagement starts
+- **Revenue Model:** 25% of transaction (industry standard for marketplaces)
+- **Conversion Trigger:** 12% of analyses → paid engagement (typical for B2B dev tools)
+- **Code Impact:** Add marketplace view, integrate Stripe Connect for partner payouts
 
-**5. ENTERPRISE TEAM PLAN ($720K ARR)**
-- **Model:** Self-hosted or cloud deployment for teams
-- **Features:**
-  - Centralized configuration management
-  - Team analytics dashboard (who's using what models)
-  - Cost allocation by team/project
-  - SSO/SAML integration
-  - Audit logs for compliance
-  - Dedicated Slack/Teams bot
-- **Pricing:** $149/user/month (minimum 5 seats)
-- **Target:** Startups with 10-50 engineers building AI products
-- **TAM:** 5,000 AI startups × 1% = 50 companies
-  - Average team size: 15 engineers × $149 = $2,235/mo
-  - 50 customers × $2,235 = **$111,750/month = $1.34M ARR**
-  - Conservative estimate (20 customers Year 1): **$535K ARR**
-- **Sales Motion:**
-  - Product-led growth: Free tier captures team leads
-  - Upgrade prompt when 3+ team members use CLI
-  - Inside sales for deals >$50K ARR
+**3. ENTERPRISE SELF-HOSTED LICENSE ($50K+/year)**
+- **What:** On-prem version for security-conscious enterprises, white-label capability
+- **Why:** CLI already local-first—just add license validation + remove Skene branding
+- **Implementation:**
+  - Create `--license-key` flag that validates against license server (or offline mode with signed keys)
+  - Add `internal/services/license/validator.go` with RSA signature verification
+  - Enterprise features: custom AI endpoints, SAML SSO, audit logs, team analytics dashboard
+  - White-label mode: `--rebrand "CompanyName"` replaces Skene ASCII art in `internal/tui/components/logo.go`
+- **Revenue Model:** $50K base + $10K per 100 developers, annual contracts
+- **Conversion Trigger:** Security teams block SaaS AI tools → need local deployment
+- **Code Impact:** 3-day implementation (license check + config flags), 0 cloud infrastructure
 
-**6. AI CONSULTING MARKETPLACE ($200K ARR)**
-- **Model:** Two-sided marketplace connecting users with growth experts
-- **How It Works:**
-  - CLI generates growth plan → "Get expert help implementing this ($499)"
-  - Skene vets and onboards growth consultants
-  - Take 20% commission on consulting engagements
-- **Average Deal:**
-  - Growth audit: $499 (1 hour)
-  - Implementation package: $2,499 (5 hours)
-  - Ongoing retainer: $1,999/month
-- **TAM:** 1,000 paid CLI users/month × 5% need consulting = 
+---
+
+### 🟡 MEDIUM PRIORITY - SCALABLE REVENUE (30-90 days)
+
+**4. AI PROVIDER REVENUE SHARE (5-10% OF API SPEND)**
+- **What:** Resell AI provider API access with markup, handle billing centrally
+- **Why:** Users already enter API keys—Skene could abstract that (simpler UX + revenue)
+- **Implementation:**
+  - Add "Use Skene Credits" option in provider selection: "No API key needed, pay as you go"
+  - Backend proxies requests to OpenAI/Anthropic, bills user at 20% markup
+  - CLI checks credit balance before analysis: `skene balance` → "$12.50 remaining"
+  - Top-up flow: "Add $50 in credits" → Stripe Checkout → redirect back to CLI
+  - Modified `internal/services/llm/client.go` to route through `https://api.skene.ai/proxy/v1/chat`
+- **Revenue Model:** Buy API tokens at wholesale ($10), sell at retail ($12) = 20% margin
+- **Conversion Trigger:** "Don't have an API key?" → 60% choose Skene credits (removes friction)
+- **Code Impact:** API proxy service (1-week build), billing integration, credit management
+
+**5. BENCHMARK-AS-A-SERVICE ($199-999/month)**
+- **What:** `--benchmark` mode as paid feature—compare your project across 5 AI models + historical trends
+- **Why:** Loop 3 in growth plan identified benchmarking value—make it premium
+- **Implementation:**
+  - Free tier: Single provider analysis only
+  - Pro tier ($199/mo): Multi-model comparison, export reports, historical tracking
+  - Enterprise tier ($999/mo): Custom model tuning, competitive benchmarking, white-label reports
+  - Store benchmark history in `~/.skene/benchmarks/` with timestamp indexes
+  - Generate PDF reports: `skene benchmark --export pdf` (use headless Chrome + HTML templates)
+- **Revenue Model:** SaaS subscriptions (33% annual, 67% monthly)
+- **Conversion Trigger:** After first analysis: "See how GPT-4 vs Claude compare → Upgrade to Pro"
+- **Code Impact:** Add benchmark storage, PDF generation, subscription check in `internal/services/growth/engine.go`
+
+**6. SKENE SCORE CERTIFICATION PROGRAM ($499 ONE-TIME)**
+- **What:** Official "Skene Certified" badge for repos scoring 85+ (requires audit)
+- **Why:** Badges in READMEs = advertising; certification = revenue + authority
+- **Implementation:**
+  - After analysis, if score ≥75: "Apply for Skene Certification → Stand out to investors/users"
+  - Manual review process: Skene team validates growth plan implementation
+  - Certified repos get:
+    - Animated badge: `![Skene Certified](https://skene.ai/cert/repo-id.svg)` with sparkle effect
+    - Directory listing on skene.ai/certified (SEO juice for them, credibility for us)
+    - LinkedIn certification for team members
+  - Renewal every 6 months ($299) to maintain badge
+- **Revenue Model:** $499 initial, $299 renewals (80% gross margin)
+- **Conversion Trigger:** 5% of 85+ scorers

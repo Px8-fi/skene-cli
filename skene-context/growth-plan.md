@@ -1,222 +1,178 @@
 # Growth Plan
-Generated: 2026-02-09
+Generated: 2026-02-10
 
 ## EXECUTIVE SUMMARY
 
-Skene CLI is a developer tool serving as the installation gateway for skene-growth, with impressive UX (retro TUI, easter egg game) but zero instrumentation or viral mechanics. The product has a critical chicken-and-egg problem: it's an installer without growth loops, depending entirely on the parent product's adoption. However, its position as the **first touchpoint** and its **beautiful, shareable UX** create unprecedented opportunities to build self-reinforcing growth loops that drive both products simultaneously.
+Skene CLI is a developer onboarding tool disguised as a codebase analyzer—a beautiful terminal wizard that introduces developers to Skene's AI-powered growth analysis service. Currently operating as a single-use conversion funnel with exceptional UX but zero viral mechanics, it's positioned perfectly for a product-led transformation. The CLI's terminal aesthetics, local-first approach, and multi-provider flexibility create trust with technical audiences, but lack of analytics, sharing features, and repeat-use patterns leave massive growth opportunities untapped.
 
 ## GROWTH LOOPS IDENTIFIED
 
-### Loop 1: Developer Showcase Loop (The "Terminal Porn" Effect)
-Priority: **HIGH** | Estimated Impact: 10-15x GitHub stars, 40% conversion to active users
+### Loop 1: Developer Community Amplification Loop
+**Priority: HIGH | Estimated Impact: 3-5x GitHub stars in 60 days, 40%+ referral traffic**
 
-**Current State:** Beautiful TUI exists but generates zero sharing data
-**Opportunity:** Developers love sharing beautiful terminal UIs on Twitter/Reddit/HN
+**Current State:** Beautiful UI generates organic screenshots/tweets but no structured sharing mechanism. Easter egg game is viral-ready but invisible (must wait through installation).
 
 **Implementation:**
-- Add `--screenshot` flag to capture ANSI art as shareable images (`internal/tui/components/ascii_motion_placeholder.go` already has rich visuals)
-- Inject watermark: "Built with Skene CLI → github.com/skene-ai/skene-cli"
-- Auto-generate on completion with prompt: "Share your setup? (s to save screenshot)"
-- Store in `~/.skene/screenshots/` with metadata (timestamp, config chosen, game score)
-- Add "Share on Twitter" hotkey that opens pre-composed tweet with image attached
-- Track screenshot generation and shares in anonymous telemetry
+- Add `--demo` flag that launches directly into space shooter game (skips installation) - makes easter egg discoverable and shareable
+- Inject share prompts at high-emotion moments: after game high score, after stunning analysis results render, when error recovery succeeds
+- Built-in `skene share [analysis-id]` command generates shareable link to public results dashboard (anonymized, opt-in)
+- Embed "Analyzed with Skene CLI" footer in growth-plan.md output with clickable GitHub link
+- Add `--theme` flag (cyberpunk, retro, matrix, etc.) to encourage "rice" culture sharing in r/unixporn
+- Track share-to-install conversion with UTM parameters in generated links (append ?ref=share-twitter to GitHub URLs)
 
-**Growth Math:**
-- Current: 0 user-generated content
-- Target: 20% of users create screenshots → 5% share publicly
-- If 1000 users → 100 screenshots → 5 Twitter posts → ~2,000 impressions each = 10,000 new eyeballs
-- Expected conversion: 2-4% try the tool → 200-400 new users
-- Viral coefficient: 0.2-0.4 (sustaining growth)
+**Why This Works:** Developers share tools that make them look skilled. Terminal aesthetics + game + beautiful output = triple shareability trigger. Recorded demos in `internal/tui/components/ascii_motion_placeholder.go` (4.9MB!) suggest video content potential.
 
-**Files to Modify:**
-- Create `internal/services/analytics/telemetry.go` (new)
-- Extend `internal/tui/views/results.go` with screenshot capability
-- Add to `internal/tui/app.go` state machine for share flow
+**Activation Metric:** % of completed analyses that generate shares | Target: 15% share rate
 
 ---
 
-### Loop 2: Project Contribution Loop (Value Documentation)
-Priority: **HIGH** | Estimated Impact: 3x project adoption, 25% contributor conversion
+### Loop 2: Codebase Analysis Network Effect Loop
+**Priority: HIGH | Estimated Impact: 2x MAU, 60% improved retention**
 
-**Current State:** `internal/services/growth/engine.go` generates contribution guides that die locally
-**Opportunity:** Turn every analysis into a public artifact that attracts contributors
+**Current State:** Tool is single-use—analyze once, never return. No memory, no comparison, no collaboration. `internal/services/analyzer/analyzer.go` has rich project detection but results vanish after viewing.
 
 **Implementation:**
-- Modify `internal/services/growth/engine.go` to generate **public-ready growth reports**:
-  - Markdown file: `GROWTH_PLAN.md` with actionable PLG recommendations
-  - Include attribution: "Generated by Skene CLI - [Add to your project](link)"
-  - Auto-detect git repo and offer to create PR with report
-- Add flag `--public-report` that generates sanitized version (no API keys, safe for public repos)
-- Create GitHub Action that comments on PRs: "🚀 Skene analyzed this project - view growth opportunities"
-- Track: report generation → PR creation → PR merge → new tool adoption
+- Create `.skene/` directory in analyzed projects with persistent analysis history (JSON manifests of past runs)
+- Add `skene diff` command comparing current codebase to previous analyses—"Your growth score improved from 73 to 81 since last month"
+- Build `skene team` multiplayer mode: share project analysis with teammates, see who's viewed results, async comments on growth recommendations
+- Introduce "Skene Score" (0-100) calculated from codebase health signals in `analyzer.go` (HasVenv, ConfigPath, PythonVersion, etc.) + AI analysis sentiment
+- Generate dynamic score badge for README: `![Skene Score](https://skene.ai/badge/{project-id})` 
+- Send weekly Slack/Discord digest: "3 teammates ran analyses, average score +5 this week" (requires opt-in webhook)
+- Reference check in `internal/services/config/manager.go`: enable team workspace config storage
 
-**Growth Math:**
-- Target: 30% of users create public reports
-- If merged into 10% of analyzed repos → badge in README
-- Each badge = ~50 monthly repo visitors → 2% try Skene = 1 new user/month/badge
-- After 1000 analyses → 100 public repos → 100 new users/month (compounding)
-- Network effect: More badges → more credibility → higher conversion
+**Why This Works:** Transforms one-off tool into habit-forming dashboard. Competitive score + team visibility = weekly check-in behavior. Badges in READMEs = passive advertising to repo visitors.
 
-**Value Prop Enhancement:**
-- Users get **instant value** (growth plan) before installing anything
-- Repo owners get **free consulting** via contribution guide
-- Skene becomes **associated with high-growth projects**
-
-**Files to Modify:**
-- `internal/services/growth/engine.go` - Add public report generator
-- `internal/services/analyzer/analyzer.go` - Detect git metadata
-- Create `internal/services/git/pr.go` for automated PR creation
-- Add `--public-report` flag to `cmd/skene/main.go`
+**Activation Metric:** % of users who run 2nd analysis within 30 days | Target: 35% retention
 
 ---
 
-### Loop 3: "Setup Competition" Gamification Loop
-Priority: **MEDIUM** | Estimated Impact: 35% retention boost, 2x referrals
+### Loop 3: AI Provider Expansion → Content Marketing Loop
+**Priority: MEDIUM | Estimated Impact: 10-15% top-of-funnel growth, SEO authority boost**
 
-**Current State:** Easter egg game exists but doesn't tie to product value
-**Opportunity:** Competitive leaderboard drives repeated engagement and invites
+**Current State:** Multi-provider support (`internal/services/llm/client.go` supports 7+ providers) is competitive advantage but hidden value. No content leveraging this flexibility.
 
 **Implementation:**
-- Transform space shooter into "Setup Speed Run" challenge:
-  - Track time from `welcome.go` → `results.go` (full setup completion)
-  - Game plays during `installing.go` - final score = setup_time_bonus + game_score
-- Create **global anonymous leaderboard** (stored at `api.skene.ai/leaderboard`):
-  - No PII - just: username (optional), setup time, game score, provider choice, timestamp
-  - Display top 100 in results dashboard (new tab in `internal/tui/views/results.go`)
-- Add social comparison: "You're faster than 73% of users! 🏆"
-- Incentivize invites: "Challenge a friend - share your score"
-- Track leaderboard views → game replays → friend invites
+- Add `--benchmark` mode that runs same analysis across multiple AI providers, generates comparison report: "Claude found 12 growth opportunities, GPT-4 found 8, Gemini found 15"
+- Auto-generate blog posts from benchmark results: "We analyzed 1,000 repos—here's which AI is best for SaaS vs dev tools"
+- Create `skene/benchmarks` GitHub repo with weekly automated runs against popular open source projects, published as markdown tables
+- Build provider-specific landing pages: "Best AI for analyzing Python projects" linking to CLI installation
+- Add `--model-playground` flag for A/B testing prompts—"Test your custom system prompt against 5 models instantly"
+- Submit benchmark data to AI leaderboards (Hugging Face, Papers with Code) with attribution links
 
-**Growth Math:**
-- Gamification increases engagement: 35% replay rate
-- Leaderboard competition: 15% share their scores
-- Each share → 0.5 new users (lower intent but high volume)
-- 1000 users → 150 shares → 75 new users → recursive loop
+**Why This Works:** Solves real decision paralysis ("Which AI should I use?") while generating SEO content. Each benchmark = 7 provider mentions = 7 backlink opportunities. Positions Skene as neutral evaluator (builds trust despite Skene provider preference).
 
-**Psychological Triggers:**
-- **Status** - Public leaderboard
-- **Achievement** - "Top 10% speedrun" badge
-- **Social proof** - "15,234 developers have set up Skene"
-- **FOMO** - "Your colleague just beat your score"
-
-**Implementation Detail:**
-- Modify `internal/game/shooter.go` to emit score events
-- Create lightweight backend: `api.skene.ai/leaderboard` (Cloudflare Worker + KV)
-- Add opt-in during welcome: "Join global leaderboard? (anonymous)"
-- Store in `internal/services/analytics/leaderboard.go`
+**Activation Metric:** Benchmark report shares + organic search traffic | Target: 500 monthly benchmark runs, 20% traffic from SEO
 
 ---
 
-### Loop 4: "LLM Cost Optimizer" Data Loop (Unlock Premium Features)
-Priority: **MEDIUM** | Estimated Impact: 60% email capture, foundation for SaaS monetization
+### Loop 4: Magic Link Auth → Data Flywheel Loop
+**Priority: MEDIUM | Estimated Impact: 25%+ conversion to Skene accounts, powers AI improvement**
 
-**Current State:** Users enter API keys but get no usage insights
-**Opportunity:** Provide immediate value while building user database
+**Current State:** `internal/tui/views/auth.go` implements magic link but no post-auth hooks. No analytics pipeline. Skene provider positioned first in list but no data capture justifying that preference.
 
 **Implementation:**
-- Add optional email capture at `internal/tui/views/apikey.go`:
-  - "Get monthly LLM cost analysis? Enter email (optional)"
-  - Store in `~/.skene/profile.json` (encrypted)
-- Track anonymous usage stats via LLM client (`internal/services/llm/client.go`):
-  - Tokens used, cost estimate, provider, model
-  - NO prompt/response content (privacy-first)
-- Monthly email: "You spent $47 on GPT-4 last month. Switch to Claude Sonnet 3.5 → save 60%"
-- Includes: Provider cost comparison, usage trends, optimization tips
-- CTA: "Get real-time cost alerts" → upsell to managed service
+- Add privacy-respecting telemetry (opt-in during welcome screen): anonymized flow completion %, error rates, provider choices, project types
+- Inject A/B testing framework in `internal/services/growth/engine.go`—randomly vary wizard order, button copy, provider positioning
+- Build internal dashboard showing conversion funnels: "73% complete system check, 45% choose Skene provider, 89% of Skene users complete analysis vs 62% of OpenAI users"
+- Use data to train better defaults: auto-select provider based on detected project type (Python → recommend Claude, Go → recommend GPT-4)
+- Generate monthly "State of Developer Tools" reports from aggregate analysis data (anonymized): "42% of analyzed projects lack virtual environments"
+- Feed growth plan quality ratings back to AI prompts—"Users rate Claude growth plans 4.2/5, GPT-4 3.8/5" → adjust system prompts
 
-**Growth Math:**
-- Email capture rate: 60% (high-value developers)
-- Monthly email open rate: 40% (cost-savings topic)
-- Click-through to dashboard: 15%
-- Conversion to premium (future): 5%
-- Email list = owned channel for product launches, partner integrations
+**Why This Works:** Currently flying blind (no analytics). Data enables iterative optimization + creates unique content assets. Privacy-first approach maintains developer trust while capturing critical insights.
 
-**Monetization Path:**
-- Phase 1: Free cost analysis (builds trust)
-- Phase 2: "Skene Cloud" - Managed LLM gateway with cost optimization ($20/mo)
-- Phase 3: Team dashboards, shared configurations ($50/user/mo)
-
-**Files to Modify:**
-- `internal/services/llm/client.go` - Add usage tracking middleware
-- Create `internal/services/analytics/usage.go`
-- Add email opt-in to `internal/tui/views/apikey.go`
-- Backend: `api.skene.ai/usage-reports` (monthly cron job)
+**Activation Metric:** Opt-in telemetry rate + iteration velocity | Target: 60% opt-in, 2-week experiment cycles
 
 ---
 
-### Loop 5: "IDE Integration" Distribution Loop
-Priority: **LOW** (foundational for long-term) | Estimated Impact: 5-10x distribution reach
+### Loop 5: Results Dashboard → Implementation Services Loop  
+**Priority: LOW | Estimated Impact: 15-20% revenue conversion (assuming paid services exist)**
 
-**Current State:** `internal/services/ide/communicator.go` exists but unclear implementation
-**Opportunity:** Ship as VSCode/JetBrains/Cursor extension → zero-friction install
+**Current State:** `internal/tui/views/results.go` renders growth plans but ends with vague "Next Steps"—no clear path from analysis to implementation. Beautiful output but unclear monetization bridge.
 
 **Implementation:**
-- Create VSCode extension that embeds Skene CLI:
-  - Right-click project → "Analyze with Skene"
-  - Terminal UI opens within VSCode terminal panel
-  - One-click install from marketplace
-- Add telemetry: extension installs, activation rate, project types analyzed
-- Cross-promote: CLI suggests "Install VSCode extension for quick access"
-- Extension suggests CLI for advanced features → bidirectional growth
+- Add "Get Help Implementing" CTA in results dashboard linking to Skene consultation booking
+- Generate implementation difficulty scores in growth-plan.md: "🟢 Easy: 8 items (2-week effort) | 🟡 Medium: 5 items (1-month) | 🔴 Hard: 3 items (partner needed)"
+- Introduce `skene track [recommendation-id]` command for marking growth items as complete—builds project timeline
+- After 3 tracked completions, prompt: "You've implemented 3 growth loops! Want help with the complex ones?" → lead form
+- Create "Skene Certified Partner" directory—CLI shows local agencies who can implement growth plans
+- Build self-serve marketplace: "Hire a PLG expert for $X to implement viral loop #2" (25% take rate)
 
-**Growth Math:**
-- VSCode marketplace: 45M users
-- Target niche: "LLM", "AI", "growth" keywords
-- Expected installs: 0.01% of search traffic = 4,500 installs/month
-- Conversion to active use: 20% = 900 new users/month
-- CLI → Extension upgrade: 30% = 300/month (from existing base)
+**Why This Works:** Bridges gap from insights to execution. CLI generates demand for services; services validate CLI's value. Implementation tracking = engagement hook + upsell trigger.
 
-**Strategic Value:**
-- **10x distribution** vs. GitHub alone
-- **Lower friction** - No terminal commands needed
-- **Persistent presence** - Always available in workspace
-- **Upsell path** - Premium features in extension
-
-**Files to Modify:**
-- Extract core logic from `cmd/skene/main.go` into `internal/core/engine.go`
-- Create `extensions/vscode/` directory with extension boilerplate
-- Ensure `internal/tui/app.go` can run in embedded terminal
-- Add RPC protocol in `internal/services/ide/communicator.go`
+**Activation Metric:** % of analyses that lead to paid engagement | Target: 8-12% conversion
 
 ---
 
 ## IMPLEMENTATION ROADMAP
 
-### Week 1-2: Foundation + Quick Wins
-- **Day 1-3:** Add anonymous telemetry framework (`internal/services/analytics/`)
-  - Event tracking: installs, completions, errors, feature usage
-  - Privacy-first: No PII, local-only option, transparent dashboard
-  - Implement in: `app.go`, `results.go`, `installing.go`
-- **Day 4-7:** Implement Screenshot Loop (#1)
-  - Add ANSI → PNG converter using existing `ascii_motion_placeholder.go` visuals
-  - "Share Setup" button in `results.go` with pre-composed tweet
-  - Store in `~/.skene/screenshots/` with metadata
-- **Day 8-10:** Deploy lightweight analytics backend
-  - Cloudflare Worker + KV store for event collection
-  - Public dashboard: `stats.skene.ai` showing daily installs, top providers, average setup time
-- **Day 11-14:** A/B test screenshot prompts
-  - Control: No prompt (current state)
-  - Variant A: "Save screenshot" button
-  - Variant B: "Share on Twitter" with pre-filled text
-  - Variant C: Auto-save + notification "Saved to ~/skene/screenshots"
-  - Target: 20% screenshot creation rate
+**Week 1-2: Instrumentation & Quick Wins**
+- Implement opt-in telemetry system with privacy controls
+- Add `--demo` flag for instant game access (viral Easter egg unlock)
+- Inject "Share your results" prompt after analysis completion
+- Ship "Analyzed with Skene" footer in growth-plan.md outputs
+- Deploy basic funnel analytics (system check → installation → analysis completion)
 
-### Week 3-4: Contribution Loop + Leaderboard MVP
-- **Day 15-18:** Build public report generator (Loop #2)
-  - Modify `growth/engine.go` to output `GROWTH_PLAN.md`
-  - Add sanitization logic (strip API keys, private paths)
-  - Implement `--public-report` flag
-  - Test with 5 real open-source repos
-- **Day 19-21:** Git integration for auto-PR
-  - Create `internal/services/git/` package
-  - Detect repo via `.git/config` parsing
-  - Use GitHub API to create PR with growth report
-  - Prompt user: "Create PR with growth plan? (y/n)"
-- **Day 22-24:** Leaderboard infrastructure (Loop #3)
-  - Deploy `api.skene.ai/leaderboard` endpoint (Cloudflare Worker)
-  - Modify `game/shooter.go` to emit final scores
-  - Add "Submit to Leaderboard" opt-in at game end
-  - Create leaderboard tab in `results.go` dashboard
-- **Day 25-28:** Social sharing polish
-  - Add "Challenge Friend" button that copies shareable link
-  - Generate unique challenge URLs: `skene.ai
+**Week 3-4: Retention Foundation**
+- Build `.skene/` persistent history storage in analyzed projects
+- Create `skene diff` command for longitudinal analysis comparison
+- Implement Skene Score calculation (0-100) from analyzer.go signals
+- Add dynamic badge generation endpoint for README embeds
+- A/B test provider ordering in wizard (Skene first vs alphabetical)
+
+**Week 5-6: Network Effects**
+- Launch `skene team` multiplayer analysis sharing
+- Build webhook integrations (Slack, Discord) for team digests
+- Create public analysis dashboard with shareable links (opt-in)
+- Add `--theme` flag with 3 visual variants (cyberpunk, retro, matrix)
+- Implement UTM tracking for share attribution
+
+**Week 7-8: Content & SEO Flywheel**
+- Ship `--benchmark` mode for multi-provider comparison
+- Set up automated weekly benchmark runs against top 100 GitHub repos
+- Build provider-specific landing pages with SEO optimization
+- Submit first benchmark report to AI leaderboards
+- Create `skene/benchmarks` public repo with historical data
+
+---
+
+## SUCCESS METRICS
+
+**Activation (30-day targets):**
+- Install-to-complete-analysis rate: **65%** (currently ~45% estimated from code flow)
+- Second analysis within 30 days: **35%** (currently ~5% single-use)
+- Telemetry opt-in rate: **60%** (new metric)
+
+**Viral Growth:**
+- Share rate (analyses → shares): **15%** (currently 0% structured)
+- Share-to-install conversion: **8%** (new funnel)
+- GitHub stars growth: **+300/month** (currently organic only)
+
+**Engagement:**
+- Weekly active analysts: **2x** (from repeat-use features)
+- Skene Score checks per user: **4x/month** (new behavior)
+- Team workspaces created: **25** (new feature)
+
+**Monetization (if services exist):**
+- Free-to-paid conversion: **10%** (new path)
+- Average implementation deal size: **$5,000** (assumption)
+
+**Strategic:**
+- SEO traffic from benchmarks: **500 visits/month** (currently 0)
+- Organic backlinks: **+50/quarter** (from reports, badges)
+- Average session duration: **+40%** (from game, diff features)
+
+---
+
+**Critical Dependencies:**
+1. Skene backend must support analysis ID tracking for sharing/history
+2. Badge generation requires simple image rendering service
+3. Team features need lightweight auth/storage layer (Firebase/Supabase)
+4. Benchmark automation needs CI/CD pipeline (GitHub Actions)
+
+**Risk Mitigation:**
+- All loops designed privacy-first (opt-in, anonymized)
+- Features degrade gracefully if backend unavailable (local-only mode)
+- No forced account creation—preserve low-friction UVX path
+- Open source remains fully functional without telemetry
+
+This strategy transforms Skene CLI from a beautiful one-time installer into a habit-forming growth platform that developers return to weekly, share proactively, and eventually pay to accelerate. The terminal UI remains the moat—competitors can copy features, but not the craft in `internal/tui/styles/styles.go`.

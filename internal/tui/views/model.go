@@ -15,8 +15,6 @@ type ModelView struct {
 	height        int
 	provider      *config.Provider
 	selectedIndex int
-	buttonGroup   *components.ButtonGroup
-	buttonFocused bool
 	header        *components.WizardHeader
 }
 
@@ -25,8 +23,6 @@ func NewModelView(provider *config.Provider) *ModelView {
 	return &ModelView{
 		provider:      provider,
 		selectedIndex: 0,
-		buttonGroup:   components.NavigationButtons(false),
-		buttonFocused: false,
 		header:        components.NewWizardHeader(3, "Select Model"),
 	}
 }
@@ -35,7 +31,6 @@ func NewModelView(provider *config.Provider) *ModelView {
 func (v *ModelView) SetProvider(provider *config.Provider) {
 	v.provider = provider
 	v.selectedIndex = 0
-	v.buttonFocused = false
 }
 
 // SetSize updates dimensions
@@ -47,10 +42,6 @@ func (v *ModelView) SetSize(width, height int) {
 
 // HandleUp moves selection up
 func (v *ModelView) HandleUp() {
-	if v.buttonFocused {
-		v.buttonFocused = false
-		return
-	}
 	if v.selectedIndex > 0 {
 		v.selectedIndex--
 	}
@@ -61,30 +52,9 @@ func (v *ModelView) HandleDown() {
 	if v.provider == nil {
 		return
 	}
-	if !v.buttonFocused && v.selectedIndex < len(v.provider.Models)-1 {
+	if v.selectedIndex < len(v.provider.Models)-1 {
 		v.selectedIndex++
-	} else if !v.buttonFocused {
-		v.buttonFocused = true
 	}
-}
-
-// HandleLeft moves button focus
-func (v *ModelView) HandleLeft() {
-	if v.buttonFocused {
-		v.buttonGroup.Previous()
-	}
-}
-
-// HandleRight moves button focus
-func (v *ModelView) HandleRight() {
-	if v.buttonFocused {
-		v.buttonGroup.Next()
-	}
-}
-
-// IsButtonFocused returns if buttons are focused
-func (v *ModelView) IsButtonFocused() bool {
-	return v.buttonFocused
 }
 
 // GetSelectedModel returns the selected model
@@ -93,11 +63,6 @@ func (v *ModelView) GetSelectedModel() *config.Model {
 		return nil
 	}
 	return &v.provider.Models[v.selectedIndex]
-}
-
-// GetButtonLabel returns selected button label
-func (v *ModelView) GetButtonLabel() string {
-	return v.buttonGroup.GetActiveLabel()
 }
 
 // Render the model view
@@ -120,13 +85,6 @@ func (v *ModelView) Render() string {
 	// Model list section
 	listSection := v.renderModelList(sectionWidth)
 
-	// Buttons
-	buttons := v.buttonGroup.Render()
-	buttonsCentered := lipgloss.NewStyle().
-		Width(sectionWidth).
-		Align(lipgloss.Right).
-		Render(buttons)
-
 	// Footer
 	footer := lipgloss.NewStyle().
 		Width(v.width).
@@ -139,8 +97,6 @@ func (v *ModelView) Render() string {
 		wizHeader,
 		"",
 		listSection,
-		"",
-		buttonsCentered,
 	)
 
 	centered := lipgloss.Place(
@@ -163,7 +119,7 @@ func (v *ModelView) renderModelList(width int) string {
 	// Model list
 	var items []string
 	for i, m := range v.provider.Models {
-		isSelected := i == v.selectedIndex && !v.buttonFocused
+		isSelected := i == v.selectedIndex
 
 		var item string
 		if isSelected {

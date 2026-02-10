@@ -1,4 +1,4 @@
-.PHONY: build run clean install dev test lint fmt
+.PHONY: build run clean install dev test lint fmt release
 
 # Binary name
 BINARY_NAME=skene
@@ -78,6 +78,15 @@ build-windows:
 	@echo "Building for Windows..."
 	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./cmd/skene
 
+# Create release archives
+release: clean build-all
+	@echo "Packaging releases..."
+	tar -czf $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64.tar.gz -C $(BUILD_DIR) $(BINARY_NAME)-darwin-arm64
+	tar -czf $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64.tar.gz -C $(BUILD_DIR) $(BINARY_NAME)-darwin-amd64
+	tar -czf $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64.tar.gz -C $(BUILD_DIR) $(BINARY_NAME)-linux-amd64
+	cd $(BUILD_DIR) && zip $(BINARY_NAME)-windows-amd64.zip $(BINARY_NAME)-windows-amd64.exe
+	@echo "Release build complete! Archives are in $(BUILD_DIR)/"
+
 # Install binary to system
 install-bin: build
 	@echo "Installing to /usr/local/bin..."
@@ -95,5 +104,6 @@ help:
 	@echo "  lint        - Run linter"
 	@echo "  fmt         - Format code"
 	@echo "  build-all   - Build for all platforms"
+	@echo "  release     - Build and package for release"
 	@echo "  install-bin - Install binary to system"
 	@echo "  help        - Show this help"

@@ -1,6 +1,6 @@
 # Skene Terminal v2
 
-A beautiful, production-ready terminal installer and configuration tool for [skene-growth](https://github.com/skene-ai/skene-growth). Built with Go using the Bubble Tea framework.
+A beautiful, production-ready terminal installer and configuration tool for [skene-growth](https://github.com/SkeneTechnologies/skene-growth). Built with Go using the Bubble Tea framework.
 
 <p align="center">
   <img src="designs/Step%201.png" width="400" alt="Welcome Screen" />

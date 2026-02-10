@@ -36,7 +36,7 @@ const (
 
 // NewAuthView creates a new auth view
 func NewAuthView(provider *config.Provider) *AuthView {
-	authURL := "https://www.skene.ai/auth"
+	authURL := "https://skene-cli-demo-9zc3.vercel.app/auth"
 	if provider != nil && provider.AuthURL != "" {
 		authURL = provider.AuthURL
 	}

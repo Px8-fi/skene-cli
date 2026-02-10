@@ -232,7 +232,7 @@ func GetProviders() []Provider {
 			Name:        "Skene (Recommended)",
 			Description: "Built-in LLM optimized for growth analysis",
 			RequiresKey: true,
-			AuthURL:     "https://www.skene.ai/auth",
+			AuthURL:     "https://skene-cli-demo-9zc3.vercel.app/auth",
 			Models: []Model{
 				{ID: "skene-growth-v1", Name: "skene-growth-v1", Description: "Growth analysis model"},
 			},

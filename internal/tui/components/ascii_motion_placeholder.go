@@ -1,4 +1,4 @@
-package asciimotion
+package components
 
 import (
 	"fmt"
@@ -18,6 +18,12 @@ var COLORS_DARK = map[string]lipgloss.Color{
 
 var COLORS_LIGHT = map[string]lipgloss.Color{
 	"c0": lipgloss.Color("#473a2f"),
+}
+
+// ASCIIMotionModel is the interface for the welcome animation
+type ASCIIMotionModel interface {
+	tea.Model
+	SetSize(width, height int)
 }
 
 // Frame represents a single animation frame
@@ -60,9 +66,23 @@ func NewWithDefaults() Model {
 	return New(true)
 }
 
-// Init initializes the model
+// NewASCIIMotion creates an ASCIIMotionModel for the welcome view
+func NewASCIIMotion(hasDarkBackground bool) ASCIIMotionModel {
+	m := New(hasDarkBackground)
+	return &m
+}
+
+// SetSize updates the animation dimensions
+func (m *Model) SetSize(width, height int) {
+	m.width = width
+	m.height = height
+}
+
+type startMsg struct{}
+
+// Init initializes the model and starts the animation
 func (m Model) Init() tea.Cmd {
-	return nil
+	return func() tea.Msg { return startMsg{} }
 }
 
 func (m Model) tick() tea.Cmd {
@@ -75,8 +95,11 @@ func (m Model) tick() tea.Cmd {
 }
 
 // Update handles messages
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case startMsg:
+		m.isPlaying = true
+		return m, m.tick()
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":

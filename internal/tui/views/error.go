@@ -167,13 +167,15 @@ func (v *ErrorView) Render() string {
 			{Key: "ctrl+c", Desc: "quit"},
 		}))
 
-	// Center
+	// Top-align with padding
+	padded := lipgloss.NewStyle().PaddingTop(2).Render(box)
+
 	centered := lipgloss.Place(
 		v.width,
 		v.height-3,
 		lipgloss.Center,
-		lipgloss.Center,
-		box,
+		lipgloss.Top,
+		padded,
 	)
 
 	return centered + "\n" + footer
@@ -230,12 +232,14 @@ func (v *ErrorView) renderLogs() string {
 			{Key: "ctrl+c", Desc: "quit"},
 		}))
 
+	paddedBox := lipgloss.NewStyle().PaddingTop(2).Render(box)
+
 	centered := lipgloss.Place(
 		v.width,
 		v.height-3,
 		lipgloss.Center,
-		lipgloss.Center,
-		box,
+		lipgloss.Top,
+		paddedBox,
 	)
 
 	return centered + "\n" + footer

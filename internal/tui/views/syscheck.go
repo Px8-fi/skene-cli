@@ -104,8 +104,8 @@ func (v *SysCheckView) Render() string {
 		sectionWidth = 80
 	}
 
-	// Wizard header
-	wizHeader := v.header.Render()
+	// Wizard header — same width as content box, left-aligned inside
+	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
 	// Check results section
 	checksSection := v.renderChecks(sectionWidth)
@@ -113,48 +113,33 @@ func (v *SysCheckView) Render() string {
 	// Status message
 	statusMsg := v.renderStatus()
 
-	// Buttons (only show when not checking)
-	var buttonsSection string
-	if !v.checking {
-		// Update button states based on results
-		if v.results != nil && v.results.CanProceed {
-			buttonsSection = v.buttonGroup.Render()
-		} else if v.results != nil && v.results.Python.Status == syscheck.StatusFailed {
-			// Show Ask IDE and Quit buttons when Python is missing
-			ideBtn := components.NewButtonGroup("Ask IDE", "Quit")
-			buttonsSection = ideBtn.Render()
-		} else if v.results != nil && !v.results.AllPassed {
-			// Show Ask IDE button when there are failures
-			ideBtn := components.NewButtonGroup("Ask IDE", "Quit")
-			buttonsSection = ideBtn.Render()
-		} else {
-			buttonsSection = v.buttonGroup.Render()
-		}
-	}
-
 	// Footer
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.WizardHelp())
+		Render(components.FooterHelp([]components.HelpItem{
+			{Key: "enter", Desc: "continue"},
+			{Key: "esc", Desc: "back"},
+			{Key: "ctrl+c", Desc: "quit"},
+		}))
 
-	// Combine
-	content := lipgloss.JoinVertical(
-		lipgloss.Center,
+	// Combine — use Left so header and box stay aligned
+	block := lipgloss.JoinVertical(
+		lipgloss.Left,
 		wizHeader,
 		"",
 		checksSection,
 		"",
 		statusMsg,
-		"",
-		buttonsSection,
 	)
+
+	content := lipgloss.NewStyle().PaddingTop(2).Render(block)
 
 	centered := lipgloss.Place(
 		v.width,
 		v.height-3,
 		lipgloss.Center,
-		lipgloss.Center,
+		lipgloss.Top,
 		content,
 	)
 

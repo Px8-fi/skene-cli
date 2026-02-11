@@ -145,8 +145,16 @@ func (v *ResultsView) updateContent() {
 
 // Render the results view
 func (v *ResultsView) Render() string {
+	sectionWidth := v.width - 20
+	if sectionWidth < 60 {
+		sectionWidth = 60
+	}
+	if sectionWidth > 80 {
+		sectionWidth = 80
+	}
+
 	// Wizard header
-	wizHeader := v.header.Render()
+	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
 	// Success banner
 	banner := styles.SuccessText.Render("✓ Analysis Complete!")
@@ -168,7 +176,7 @@ func (v *ResultsView) Render() string {
 
 	// Combine
 	content := lipgloss.JoinVertical(
-		lipgloss.Center,
+		lipgloss.Left,
 		wizHeader,
 		"",
 		banner,

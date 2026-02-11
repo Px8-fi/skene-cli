@@ -55,14 +55,6 @@ func (h *WizardHeader) SetStep(step int, name string) {
 
 // Render the wizard header
 func (h *WizardHeader) Render() string {
-	headerWidth := h.Width - 4
-	if headerWidth < 60 {
-		headerWidth = 60
-	}
-	if headerWidth > 100 {
-		headerWidth = 100
-	}
-
 	// Step counter
 	stepCounter := styles.Muted.Render(fmt.Sprintf("Step %d of %d", h.CurrentStep, h.TotalSteps))
 
@@ -72,33 +64,14 @@ func (h *WizardHeader) Render() string {
 	// Progress dots
 	dots := renderWizardDots(h.CurrentStep, h.TotalSteps)
 
-	// Left side: step info
-	leftSide := lipgloss.JoinVertical(
+	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		stepCounter,
 		stepName,
-	)
-
-	// Layout
-	topBar := lipgloss.JoinHorizontal(
-		lipgloss.Center,
-		leftSide,
-	)
-
-	// Separator line
-	sep := styles.Divider(headerWidth)
-
-	content := lipgloss.JoinVertical(
-		lipgloss.Left,
-		topBar,
 		dots,
-		sep,
 	)
 
-	return lipgloss.NewStyle().
-		Width(headerWidth).
-		Padding(0, 2).
-		Render(content)
+	return content
 }
 
 // RenderCompact renders a compact single-line header
@@ -121,15 +94,18 @@ func renderWizardDots(current, total int) string {
 	var dots string
 	for i := 1; i <= total; i++ {
 		if i < current {
-			dots += styles.SuccessText.Render("●")
-		} else if i == current {
+			// Completed: filled amber dot
 			dots += styles.Accent.Render("●")
+		} else if i == current {
+			// Active: outlined amber dot
+			dots += styles.Accent.Render("◉")
 		} else {
+			// Future: muted empty dot
 			dots += styles.Muted.Render("○")
 		}
 		if i < total {
 			if i < current {
-				dots += styles.SuccessText.Render("─")
+				dots += styles.Accent.Render("─")
 			} else {
 				dots += styles.Muted.Render("─")
 			}

@@ -302,7 +302,7 @@ func (v *ProjectDirView) Render() string {
 	}
 
 	// Wizard header
-	wizHeader := v.header.Render()
+	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
 	if v.browsing && v.dirBrowser != nil {
 		// Render the directory browser
@@ -315,7 +315,7 @@ func (v *ProjectDirView) Render() string {
 			Render(v.browseButtons.Render())
 
 		content := lipgloss.JoinVertical(
-			lipgloss.Center,
+			lipgloss.Left,
 			wizHeader,
 			"",
 			browserSection,
@@ -323,12 +323,14 @@ func (v *ProjectDirView) Render() string {
 			browseBtns,
 		)
 
+		padded := lipgloss.NewStyle().PaddingTop(2).Render(content)
+
 		centered := lipgloss.Place(
 			v.width,
 			v.height-3,
 			lipgloss.Center,
-			lipgloss.Center,
-			content,
+			lipgloss.Top,
+			padded,
 		)
 
 		return centered
@@ -351,7 +353,7 @@ func (v *ProjectDirView) Render() string {
 
 	// Combine
 	content := lipgloss.JoinVertical(
-		lipgloss.Center,
+		lipgloss.Left,
 		wizHeader,
 		"",
 		dirSection,
@@ -359,12 +361,14 @@ func (v *ProjectDirView) Render() string {
 		buttons,
 	)
 
+	padded := lipgloss.NewStyle().PaddingTop(2).Render(content)
+
 	centered := lipgloss.Place(
 		v.width,
 		v.height-3,
 		lipgloss.Center,
-		lipgloss.Center,
-		content,
+		lipgloss.Top,
+		padded,
 	)
 
 	return centered + "\n" + footer

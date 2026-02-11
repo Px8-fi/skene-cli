@@ -50,31 +50,26 @@ func (v *WelcomeView) InitAnimation() tea.Cmd {
 
 // Render the welcome view
 func (v *WelcomeView) Render() string {
-	// Title
-	title := styles.Title.Copy().
-		MarginBottom(1).
-		Render("Welcome to Skene Growth")
+	// Content width for consistent centering
+	contentWidth := 60
+	if v.width > 0 && v.width < contentWidth {
+		contentWidth = v.width - 4
+	}
+
+	center := lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center)
 
 	// Animated logo
 	logo := v.anim.View()
 
 	// Subtitle
-	subtitle := styles.Subtitle.Render("Product-Led Growth analysis for your codebase")
-
-	// Features
-	features := lipgloss.JoinVertical(
-		lipgloss.Left,
-		styles.Body.Render("  Detect tech stacks & growth opportunities"),
-		styles.Body.Render("  Generate growth manifests & documentation"),
-		styles.Body.Render("  AI-powered growth loop analysis"),
-	)
+	subtitle := center.Render(styles.Subtitle.Render("Product-Led Growth analysis for your codebase"))
 
 	// Call to action
 	enterKey := styles.Accent.Bold(true).Render(">ENTER<")
-	cta := styles.Body.Render("Press ") + enterKey + styles.Body.Render(" to begin setup")
+	cta := center.Render(enterKey)
 
 	// Version info
-	version := styles.Muted.Render("v0.1.8 • github.com/SkeneTechnologies/skene-growth")
+	version := center.Render(styles.Muted.Render("v0.1.8 • github.com/SkeneTechnologies/skene-growth"))
 
 	// Footer help
 	footer := components.FooterHelp([]components.HelpItem{
@@ -86,16 +81,12 @@ func (v *WelcomeView) Render() string {
 	// Combine elements
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
-		title,
-		"",
 		logo,
-		"",
-		subtitle,
-		"",
-		features,
 		"",
 		"",
 		cta,
+		"",
+		subtitle,
 		"",
 		version,
 	)
@@ -109,7 +100,7 @@ func (v *WelcomeView) Render() string {
 		content,
 	)
 
-	// Add footer at bottom
+	// Footer pinned at bottom
 	footerStyled := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).

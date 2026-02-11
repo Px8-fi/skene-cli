@@ -129,10 +129,12 @@ func (v *InstallingView) Render() string {
 	}
 
 	// Wizard header
-	wizHeader := v.header.Render()
+	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
-	// Installation title
-	installTitle := styles.Accent.Render(components.StaticLogo)
+	// Installation title — centered within the section
+	installTitle := lipgloss.NewStyle().Width(sectionWidth).Align(lipgloss.Center).Render(
+		styles.Accent.Render(components.StaticLogo),
+	)
 
 	// Progress section
 	progressSection := v.renderProgress(sectionWidth)
@@ -148,7 +150,7 @@ func (v *InstallingView) Render() string {
 
 	// Combine
 	content := lipgloss.JoinVertical(
-		lipgloss.Center,
+		lipgloss.Left,
 		wizHeader,
 		"",
 		installTitle,
@@ -158,12 +160,14 @@ func (v *InstallingView) Render() string {
 		elapsed,
 	)
 
+	padded := lipgloss.NewStyle().PaddingTop(2).Render(content)
+
 	centered := lipgloss.Place(
 		v.width,
 		v.height-3,
 		lipgloss.Center,
-		lipgloss.Center,
-		content,
+		lipgloss.Top,
+		padded,
 	)
 
 	return centered + "\n" + footer

@@ -116,10 +116,16 @@ func (v *AuthView) Render() string {
 		return v.renderFallback()
 	}
 
-	sectionWidth := 60
+	sectionWidth := v.width - 20
+	if sectionWidth < 60 {
+		sectionWidth = 60
+	}
+	if sectionWidth > 80 {
+		sectionWidth = 80
+	}
 
-	// Wizard header
-	wizHeader := v.header.Render()
+	// Wizard header — match box width for alignment
+	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
 	// Auth content based on state
 	var authContent string
@@ -147,19 +153,21 @@ func (v *AuthView) Render() string {
 
 	// Combine
 	fullContent := lipgloss.JoinVertical(
-		lipgloss.Center,
+		lipgloss.Left,
 		wizHeader,
 		"",
 		"",
 		authContent,
 	)
 
+	padded := lipgloss.NewStyle().PaddingTop(2).Render(fullContent)
+
 	centered := lipgloss.Place(
 		v.width,
 		v.height-3,
 		lipgloss.Center,
-		lipgloss.Center,
-		fullContent,
+		lipgloss.Top,
+		padded,
 	)
 
 	return centered + "\n" + footer
@@ -257,9 +265,15 @@ func (v *AuthView) renderSuccess(width int) string {
 }
 
 func (v *AuthView) renderFallback() string {
-	sectionWidth := 60
+	sectionWidth := v.width - 20
+	if sectionWidth < 60 {
+		sectionWidth = 60
+	}
+	if sectionWidth > 80 {
+		sectionWidth = 80
+	}
 
-	wizHeader := v.header.Render()
+	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
 	message := styles.Body.Render("Browser auth cancelled.")
 	subMessage := styles.Muted.Render("You can enter your Skene API key manually.")
@@ -288,19 +302,21 @@ func (v *AuthView) renderFallback() string {
 		}))
 
 	fullContent := lipgloss.JoinVertical(
-		lipgloss.Center,
+		lipgloss.Left,
 		wizHeader,
 		"",
 		"",
 		box,
 	)
 
+	padded := lipgloss.NewStyle().PaddingTop(2).Render(fullContent)
+
 	centered := lipgloss.Place(
 		v.width,
 		v.height-3,
 		lipgloss.Center,
-		lipgloss.Center,
-		fullContent,
+		lipgloss.Top,
+		padded,
 	)
 
 	return centered + "\n" + footer

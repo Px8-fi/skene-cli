@@ -584,23 +584,9 @@ func (a *App) handleSysCheckKeys(key string) tea.Cmd {
 
 	switch key {
 	case "enter":
-		btn := a.sysCheckView.GetButtonLabel()
-		switch btn {
-		case "Continue":
-			if a.sysCheckView.CanProceed() {
-				a.transitionToInstallMethod()
-			}
-		case "Install uv":
-			return a.startUVInstallCmd()
-		case "Ask IDE":
-			return a.sendIDEHelpRequest()
-		case "Quit":
-			return tea.Quit
+		if a.sysCheckView.CanProceed() {
+			a.transitionToInstallMethod()
 		}
-	case "left", "h":
-		a.sysCheckView.HandleLeft()
-	case "right", "l":
-		a.sysCheckView.HandleRight()
 	}
 	return nil
 }

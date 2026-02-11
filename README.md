@@ -285,6 +285,9 @@ make fmt
 # Build for all platforms
 make build-all
 
+# Zip files
+make release
+
 # Output will be in build/
 # - skene-linux-amd64
 # - skene-darwin-amd64

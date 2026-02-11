@@ -1,4 +1,4 @@
-package asciimotion
+package components
 
 import (
 	"fmt"
@@ -18,6 +18,12 @@ var COLORS_DARK = map[string]lipgloss.Color{
 
 var COLORS_LIGHT = map[string]lipgloss.Color{
 	"c0": lipgloss.Color("#473a2f"),
+}
+
+// ASCIIMotionModel is the interface for the intro animation
+type ASCIIMotionModel interface {
+	tea.Model
+	SetSize(width, height int)
 }
 
 // Frame represents a single animation frame
@@ -41,6 +47,9 @@ type Model struct {
 
 type tickMsg time.Time
 
+// startMsg triggers the animation to begin playing (sent from Init)
+type startMsg struct{}
+
 // New creates a new animation model
 // Set hasDarkBackground to true for dark terminals, false for light terminals
 func New(hasDarkBackground bool) Model {
@@ -60,9 +69,21 @@ func NewWithDefaults() Model {
 	return New(true)
 }
 
-// Init initializes the model
+// NewASCIIMotionWithDefaults returns an ASCIIMotionModel for the intro view
+func NewASCIIMotionWithDefaults() ASCIIMotionModel {
+	m := NewWithDefaults()
+	return &m
+}
+
+// SetSize updates the animation dimensions
+func (m *Model) SetSize(width, height int) {
+	m.width = width
+	m.height = height
+}
+
+// Init initializes the model and starts the animation
 func (m Model) Init() tea.Cmd {
-	return nil
+	return func() tea.Msg { return startMsg{} }
 }
 
 func (m Model) tick() tea.Cmd {
@@ -75,8 +96,11 @@ func (m Model) tick() tea.Cmd {
 }
 
 // Update handles messages
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case startMsg:
+		m.isPlaying = true
+		return m, m.tick()
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "q", "ctrl+c":

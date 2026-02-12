@@ -59,15 +59,8 @@ func NewInstaller(projectPath string, analysis *analyzer.AnalysisResult, cfg *co
 func (i *Installer) SetupTasks() {
 	i.tasks = []*Task{
 		{ID: "detect", Name: "Detecting project type", Status: TaskPending},
-		{ID: "venv", Name: "Setting up virtual environment", Status: TaskPending},
-		{ID: "install", Name: "Installing skene-growth", Status: TaskPending},
 		{ID: "config", Name: "Generating configuration", Status: TaskPending},
 		{ID: "manifest", Name: "Creating manifest files", Status: TaskPending},
-	}
-
-	// Remove venv task if already exists or not Python
-	if i.analysis.HasVenv || i.analysis.ProjectType != analyzer.ProjectTypePython {
-		i.removeTask("venv")
 	}
 }
 
@@ -162,10 +155,6 @@ func (i *Installer) RunTask(ctx context.Context, taskID string) error {
 	switch taskID {
 	case "detect":
 		err = i.runDetect(ctx, task)
-	case "venv":
-		err = i.runVenvSetup(ctx, task)
-	case "install":
-		err = i.runInstall(ctx, task)
 	case "config":
 		err = i.runConfigGen(ctx, task)
 	case "manifest":
@@ -220,48 +209,6 @@ func (i *Installer) runDetect(ctx context.Context, task *Task) error {
 
 	i.log(fmt.Sprintf("Detected project type: %s", i.analysis.ProjectType))
 	i.log(fmt.Sprintf("Install method: %s", i.analysis.InstallMethod))
-	return nil
-}
-
-func (i *Installer) runVenvSetup(ctx context.Context, task *Task) error {
-	if i.analysis.HasVenv {
-		i.log("Virtual environment already exists")
-		task.Progress = 1.0
-		return nil
-	}
-
-	cmd := i.getVenvCommand()
-	i.log(fmt.Sprintf("Running: %s", cmd))
-
-	task.Progress = 0.3
-	err := i.executeCommand(ctx, cmd)
-	if err != nil {
-		return fmt.Errorf("failed to create virtual environment: %w", err)
-	}
-
-	task.Progress = 1.0
-	return nil
-}
-
-func (i *Installer) runInstall(ctx context.Context, task *Task) error {
-	cmd := i.getInstallCommand()
-	i.log(fmt.Sprintf("Running: %s", cmd))
-
-	task.Progress = 0.2
-
-	// For simulation, we just wait
-	// In production, execute the actual command
-	for p := 0.2; p <= 0.9; p += 0.1 {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			task.Progress = p
-			time.Sleep(200 * time.Millisecond)
-		}
-	}
-
-	task.Progress = 1.0
 	return nil
 }
 
@@ -346,31 +293,6 @@ Run ` + "`skene analyze`" + ` to generate detailed recommendations.
 	i.log(fmt.Sprintf("Created growth plan: %s", growthPlanPath))
 	task.Progress = 1.0
 	return nil
-}
-
-// Helper methods
-func (i *Installer) getVenvCommand() string {
-	switch i.analysis.InstallMethod {
-	case analyzer.InstallMethodPoetry:
-		return "poetry install"
-	case analyzer.InstallMethodUV:
-		return "uv venv .venv"
-	default:
-		return "python -m venv .venv"
-	}
-}
-
-func (i *Installer) getInstallCommand() string {
-	switch i.analysis.InstallMethod {
-	case analyzer.InstallMethodPoetry:
-		return "poetry add skene-growth"
-	case analyzer.InstallMethodPipenv:
-		return "pipenv install skene-growth"
-	case analyzer.InstallMethodUV:
-		return "uv pip install skene-growth"
-	default:
-		return "pip install skene-growth"
-	}
 }
 
 func (i *Installer) executeCommand(ctx context.Context, cmdStr string) error {

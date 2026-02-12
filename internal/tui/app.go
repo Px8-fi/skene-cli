@@ -22,6 +22,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pkg/browser"
+	"path/filepath"
 )
 
 // ═══════════════════════════════════════════════════════════════════
@@ -349,21 +350,17 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case AnalysisDoneMsg:
-		if msg.Error != nil {
+		err := msg.Error
+		if err == nil && msg.Result != nil && msg.Result.Error != nil {
+			err = msg.Result.Error
+		}
+		if err != nil {
+			suggestion := analysisErrorSuggestion(err)
 			a.showError(&views.ErrorInfo{
 				Code:       "ANALYSIS_FAILED",
 				Title:      "Analysis Failed",
-				Message:    msg.Error.Error(),
-				Suggestion: "Check your API key, network connection, and try again.",
-				Severity:   views.SeverityError,
-				Retryable:  true,
-			})
-		} else if msg.Result != nil && msg.Result.Error != nil {
-			a.showError(&views.ErrorInfo{
-				Code:       "ANALYSIS_FAILED",
-				Title:      "Analysis Failed",
-				Message:    msg.Result.Error.Error(),
-				Suggestion: "Check your API key, network connection, and try again.",
+				Message:    err.Error(),
+				Suggestion: suggestion,
 				Severity:   views.SeverityError,
 				Retryable:  true,
 			})
@@ -403,27 +400,14 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case UVInstallDoneMsg:
 		if msg.Error != nil {
-			// Check if it's an InstallUVError with alternatives
-			if installErr, ok := msg.Error.(*syscheck.InstallUVError); ok {
-				errorInfo := &views.ErrorInfo{
-					Code:       "UV_INSTALL_FAILED",
-					Title:      "uv Installation Failed",
-					Message:    installErr.Error(),
-					Suggestion: "Try one of these alternative installation methods:",
-					Severity:   views.SeverityWarning,
-					Retryable:  true,
-				}
-				// Add alternatives as additional context
-				if len(installErr.Alternatives) > 0 {
-					errorInfo.Suggestion += "\n\n" + strings.Join(installErr.Alternatives, "\n")
-				} else {
-					alternatives := a.sysChecker.GetAlternativeInstallCommands()
-					errorInfo.Suggestion += "\n\n" + strings.Join(alternatives, "\n")
-				}
-				a.showError(errorInfo)
-			} else {
-				a.showError(views.ErrUVInstallFailed)
-			}
+			a.showError(&views.ErrorInfo{
+				Code:       "UV_INSTALL_FAILED",
+				Title:      "Installation Failed",
+				Message:    msg.Error.Error(),
+				Suggestion: "This should not happen with the Rust engine.",
+				Severity:   views.SeverityWarning,
+				Retryable:  true,
+			})
 		} else {
 			// Re-run system checks
 			a.startSysCheck()
@@ -569,10 +553,10 @@ func (a *App) handleKeyPress(msg tea.KeyMsg) tea.Cmd {
 func (a *App) handleWelcomeKeys(key string) tea.Cmd {
 	switch key {
 	case "enter":
-		a.state = StateSysCheck
-		a.sysCheckView = views.NewSysCheckView()
-		a.sysCheckView.SetSize(a.width, a.height)
-		return a.startSysCheckCmd()
+		// Skip system checks and installation, go straight to provider selection
+		a.state = StateProviderSelect
+		a.providerView.SetSize(a.width, a.height)
+		return nil
 	}
 	return nil
 }
@@ -917,8 +901,10 @@ func (a *App) handleNextStepsKeys(key string) tea.Cmd {
 			return a.startAnalysis()
 		case "config":
 			a.state = StateProviderSelect
-		case "plan", "validate":
-			// Run the command and show output
+		case "plan":
+			return a.startPlan()
+		case "validate":
+			// Validate logic if needed, or remove
 			if action.Command != "" {
 				return a.runNextStepCommand(action.Command)
 			}
@@ -1214,6 +1200,48 @@ func (a *App) startRealAnalysisCmd(p *tea.Program) tea.Cmd {
 	}
 }
 
+func (a *App) startPlan() tea.Cmd {
+	a.analyzingView = views.NewAnalyzingView()
+	a.analyzingView.SetSize(a.width, a.height)
+	a.analysisStartTime = time.Now()
+	a.state = StateAnalyzing
+	return a.startPlanCmd()
+}
+
+func (a *App) startPlanCmd() tea.Cmd {
+	cfg := growth.EngineConfig{
+		Provider:   a.configMgr.Config.Provider,
+		Model:      a.configMgr.Config.Model,
+		APIKey:     a.configMgr.Config.APIKey,
+		BaseURL:    a.configMgr.Config.BaseURL,
+		ProjectDir: a.configMgr.Config.ProjectDir,
+		OutputDir:  a.configMgr.Config.OutputDir,
+	}
+	if cfg.ProjectDir == "" {
+		cfg.ProjectDir, _ = os.Getwd()
+	}
+
+	return func() tea.Msg {
+		// Use RustEngine directly for planning
+		engine, err := growth.NewRustEngine(cfg, func(update growth.PhaseUpdate) {
+			if a.program != nil {
+				a.program.Send(AnalysisPhaseMsg{Update: update})
+			}
+		})
+		if err != nil {
+			return AnalysisDoneMsg{Error: err}
+		}
+
+		manifestPath := filepath.Join(cfg.OutputDir, "growth-manifest.json")
+		result := engine.GeneratePlan(manifestPath, false)
+
+		if result.Error != nil {
+			return AnalysisDoneMsg{Error: result.Error, Result: result}
+		}
+		return AnalysisDoneMsg{Error: nil, Result: result}
+	}
+}
+
 func (a *App) runNextStepCommand(cmdStr string) tea.Cmd {
 	// Switch to analyzing view to show the command output
 	a.analyzingView = views.NewAnalyzingView()
@@ -1310,6 +1338,22 @@ func (a *App) detectLocalModels() tea.Cmd {
 			Error: fmt.Errorf("could not connect to local model server"),
 		}
 	}
+}
+
+// analysisErrorSuggestion returns a contextual suggestion based on the error
+func analysisErrorSuggestion(err error) string {
+	s := err.Error()
+	if strings.Contains(s, "skene-engine") &&
+		(strings.Contains(s, "not found") || strings.Contains(s, "executable file not found") || strings.Contains(s, "$PATH")) {
+		return "Place skene-engine in the same directory as skene, or add it to your PATH. Run 'make build' if building from source."
+	}
+	if strings.Contains(s, "API key") || strings.Contains(s, "401") || strings.Contains(s, "unauthorized") {
+		return "Check your API key, ensure it has the required permissions, and try again."
+	}
+	if strings.Contains(s, "network") || strings.Contains(s, "connection") || strings.Contains(s, "timeout") {
+		return "Check your network connection and try again."
+	}
+	return "Check the logs for details and try again."
 }
 
 func (a *App) showError(err *views.ErrorInfo) {

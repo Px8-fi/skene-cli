@@ -34,13 +34,13 @@ func NewNextStepsView() *NextStepsView {
 				ID:          "plan",
 				Name:        "Generate Growth Roadmap",
 				Description: "Create a detailed growth plan with prioritized loops",
-				Command:     "uvx skene-growth plan",
+				Command:     "", // Handled internally
 			},
 			{
-				ID:          "validate",
-				Name:        "Validate Manifest",
-				Description: "Check the generated manifest for completeness",
-				Command:     "uvx skene-growth validate ./skene-context/growth-manifest.json",
+				ID:          "open",
+				Name:        "Open Generated Files",
+				Description: "View the output in ./skene-context/",
+				Command:     "",
 			},
 			{
 				ID:          "rerun",
@@ -52,12 +52,6 @@ func NewNextStepsView() *NextStepsView {
 				ID:          "config",
 				Name:        "Change Configuration",
 				Description: "Modify provider, model, or project settings",
-				Command:     "",
-			},
-			{
-				ID:          "open",
-				Name:        "Open Generated Files",
-				Description: "View the output in ./skene-context/",
 				Command:     "",
 			},
 			{

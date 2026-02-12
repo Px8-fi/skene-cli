@@ -32,21 +32,7 @@ type InstallingView struct {
 
 // NewInstallingView creates a new installing progress view
 func NewInstallingView(method string) *InstallingView {
-	var tasks []InstallTask
-	if method == "uvx" {
-		tasks = []InstallTask{
-			{Name: "Resolving ephemeral environment", Active: true},
-			{Name: "Downloading skene-growth", Active: false},
-			{Name: "Verifying installation", Active: false},
-		}
-	} else {
-		tasks = []InstallTask{
-			{Name: "Setting up environment", Active: true},
-			{Name: "Installing skene-growth", Active: false},
-			{Name: "Installing dependencies", Active: false},
-			{Name: "Verifying installation", Active: false},
-		}
-	}
+	tasks := []InstallTask{}
 
 	return &InstallingView{
 		tasks:   tasks,

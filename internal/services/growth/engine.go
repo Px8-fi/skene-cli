@@ -50,23 +50,34 @@ type EngineConfig struct {
 
 // Engine performs real codebase analysis using LLM
 type Engine struct {
-	config   EngineConfig
-	client   *llm.Client
-	updateFn func(PhaseUpdate)
+	config     EngineConfig
+	client     *llm.Client
+	updateFn   func(PhaseUpdate)
+	rustEngine *RustEngine
 }
 
 // NewEngine creates a new analysis engine
 func NewEngine(config EngineConfig, updateFn func(PhaseUpdate)) *Engine {
+	// Try to initialize Rust engine first
+	rustEngine, _ := NewRustEngine(config, updateFn)
+	// If successful, use it. If not (binary not found), fallback to Go engine.
+	
 	client := llm.NewClient(config.Provider, config.Model, config.APIKey, config.BaseURL)
 	return &Engine{
-		config:   config,
-		client:   client,
-		updateFn: updateFn,
+		config:     config,
+		client:     client,
+		updateFn:   updateFn,
+		rustEngine: rustEngine, // Might be nil if binary not found
 	}
 }
 
 // Run executes the full analysis pipeline
 func (e *Engine) Run(ctx context.Context) *AnalysisResult {
+	if e.rustEngine != nil {
+		return e.rustEngine.Run()
+	}
+
+	// Legacy Go implementation
 	result := &AnalysisResult{}
 
 	// Phase 1: Scan codebase

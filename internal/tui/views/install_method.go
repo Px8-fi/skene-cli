@@ -29,24 +29,7 @@ type InstallMethodView struct {
 
 // NewInstallMethodView creates a new install method selection view
 func NewInstallMethodView(uvAvailable bool) *InstallMethodView {
-	options := []InstallMethodOption{
-		{
-			ID:          "uvx",
-			Name:        "Quick Run (uvx)",
-			Description: "Run skene-growth without installing",
-			Detail:      "Ephemeral environment - no permanent installation",
-			Command:     "uvx skene-growth analyze .",
-			Recommended: uvAvailable,
-		},
-		{
-			ID:          "pip",
-			Name:        "Full Install (pip)",
-			Description: "Install skene-growth as a package",
-			Detail:      "Permanent installation in your environment",
-			Command:     "pip install skene-growth",
-			Recommended: !uvAvailable,
-		},
-	}
+	options := []InstallMethodOption{}
 
 	return &InstallMethodView{
 		options:       options,

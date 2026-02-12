@@ -1,6 +1,26 @@
-internal/.DS_Store
+# OS
 .DS_Store
+internal/.DS_Store
+
+# Binaries
 skene
-skene-context/growth-plan.md
-skene-context/manifest.md
-skene-context/product-docs.md
+skene-cli
+skene-engine
+build/
+
+# Output / generated
+skene-context/
+tmp/
+tmp_rust_install/
+
+# Local Rust toolchain (optional fallback when system cargo not installed)
+.local_rust
+
+# Rust build output
+engine/target/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo

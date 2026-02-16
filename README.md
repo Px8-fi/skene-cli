@@ -30,11 +30,6 @@ A beautiful, production-ready terminal installer and configuration tool for [ske
 
 ## Installation
 
-> **Note:** If this is a private repository, you'll need to either:
-> - Make the repository public, OR
-> - Download the install script manually from GitHub releases, OR
-> - Clone the repository and run `./install.sh` from the project directory
-
 ### Quick Install (Recommended)
 
 Install `skene` with a single command:
@@ -43,13 +38,27 @@ Install `skene` with a single command:
 curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/Rust-impelementation/install.sh | bash
 ```
 
-**For private repositories:** If the above doesn't work, clone the repo and run the install script locally:
+This will:
+- Automatically detect your platform (macOS, Linux, or Windows)
+- Download the appropriate binary from the latest GitHub release (if available)
+- Or build from source if releases aren't available
+- Install to `/usr/local/bin/skene`
+- Make it executable and verify installation
+
+### Alternative: Clone and Install
+
+If you prefer to clone the repository first:
 
 ```bash
+# Clone the repository
 git clone https://github.com/Px8-fi/skene-cli
 cd skene-cli
+
+# Run the install script
 ./install.sh
 ```
+
+The install script will automatically detect you're in the repository directory and use the local `build/skene` binary if available.
 
 This will:
 - Automatically detect your platform (macOS, Linux, or Windows)

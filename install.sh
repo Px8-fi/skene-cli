@@ -215,6 +215,7 @@ main() {
     echo -e "Detected platform: ${platform}"
     
     local binary_file=""
+    local temp_dir=""
     
     # If USE_LOCAL is set or we're in the repo directory, try local build first
     if [ "$USE_LOCAL" = "true" ] || [ -f "go.mod" ]; then
@@ -249,12 +250,47 @@ main() {
                 echo -e "${BLUE}Building from source instead...${NC}"
                 binary_file=$(build_local)
             else
-                echo -e "${RED}Error: No releases available and not in source directory.${NC}" >&2
-                echo -e "${YELLOW}Please either:${NC}"
-                echo -e "  1. Create a GitHub release with binaries"
-                echo -e "  2. Run this script from the repository directory"
-                echo -e "  3. Set USE_LOCAL=true to build locally"
-                exit 1
+                echo -e "${YELLOW}No releases available. Attempting to clone and build from source...${NC}"
+                
+                # Try to clone and build
+                temp_dir=$(mktemp -d)
+                clone_dir="${temp_dir}/skene-cli"
+                original_dir=$(pwd)
+                
+                echo -e "${BLUE}Cloning repository to ${clone_dir}...${NC}"
+                if git clone --depth 1 --branch Rust-impelementation https://github.com/${REPO}.git "${clone_dir}" 2>/dev/null; then
+                    cd "${clone_dir}"
+                    if [ -f "go.mod" ]; then
+                        echo -e "${BLUE}Building from source...${NC}"
+                        if binary_file=$(build_local); then
+                            echo -e "${GREEN}Build successful!${NC}"
+                            # Make path absolute
+                            if [ ! "$(echo "$binary_file" | cut -c1)" = "/" ]; then
+                                binary_file="${clone_dir}/${binary_file}"
+                            fi
+                            # Return to original directory
+                            cd "$original_dir"
+                        else
+                            echo -e "${RED}Build failed.${NC}" >&2
+                            cd "$original_dir"
+                            rm -rf "$temp_dir"
+                            exit 1
+                        fi
+                    else
+                        echo -e "${RED}Error: Repository cloned but go.mod not found${NC}" >&2
+                        cd "$original_dir"
+                        rm -rf "$temp_dir"
+                        exit 1
+                    fi
+                else
+                    echo -e "${RED}Error: Failed to clone repository${NC}" >&2
+                    echo -e "${YELLOW}Please either:${NC}"
+                    echo -e "  1. Create a GitHub release with binaries"
+                    echo -e "  2. Clone the repository manually: git clone https://github.com/${REPO}"
+                    echo -e "  3. Run this script from the repository directory"
+                    rm -rf "$temp_dir"
+                    exit 1
+                fi
             fi
         else
             echo -e "Installing version: ${version}"
@@ -270,11 +306,21 @@ main() {
     
     if [ -z "$binary_file" ] || [ ! -f "$binary_file" ]; then
         echo -e "${RED}Error: Could not obtain binary${NC}" >&2
+        # Clean up temp directory if we cloned the repo
+        if [ -n "$temp_dir" ] && [ -d "$temp_dir" ]; then
+            rm -rf "$temp_dir"
+        fi
         exit 1
     fi
     
     # Install binary
     install_binary "$binary_file"
+    
+    # Clean up temp directory if we cloned the repo
+    if [ -n "$temp_dir" ] && [ -d "$temp_dir" ]; then
+        echo -e "${BLUE}Cleaning up temporary files...${NC}"
+        rm -rf "$temp_dir"
+    fi
     
     # Verify installation
     verify_installation

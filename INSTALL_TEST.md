@@ -15,13 +15,32 @@ curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/Rust-impelementati
 **What to check:**
 - ✅ Script downloads successfully
 - ✅ Platform is detected correctly (macOS ARM64/Intel, Linux, Windows)
-- ✅ Binary downloads from GitHub releases (if releases exist)
+- ✅ Script runs without errors
 - ✅ Installation completes successfully
 - ✅ `skene` command works after installation
 
-**If GitHub releases don't exist yet:**
-- The script should fall back to building from source (if you have Go installed)
-- Or show a helpful error message
+**Note:** If GitHub releases don't exist yet, the script will:
+- Try to build from source (if you have Go installed and are in the repo)
+- Or show a helpful error message with next steps
+
+### Test Scenario 2: Clone and Install
+
+If you prefer to clone the repository first:
+
+```bash
+# Clone the repository
+git clone https://github.com/Px8-fi/skene-cli
+cd skene-cli
+
+# Run the install script
+./install.sh
+```
+
+**What to check:**
+- ✅ Script detects you're in the repo directory
+- ✅ Uses existing `build/skene` if available
+- ✅ Or builds from source if needed
+- ✅ Installation completes successfully
 
 ### Test Scenario 2: Manual Script Download
 
@@ -102,9 +121,16 @@ The installation is successful if:
 Run this to test everything:
 
 ```bash
-# Test installation
+# Test one-liner installation
 curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/Rust-impelementation/install.sh | bash
 
 # Verify it works
 skene --version || skene --help || echo "skene command found at: $(which skene)"
+```
+
+**Alternative:** Clone and install:
+```bash
+git clone https://github.com/Px8-fi/skene-cli
+cd skene-cli
+./install.sh
 ```

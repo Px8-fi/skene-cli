@@ -67,7 +67,7 @@ check_local_build() {
 
 # Build locally
 build_local() {
-    echo -e "${YELLOW}Building ${BINARY_NAME} locally...${NC}"
+    echo -e "${YELLOW}Building ${BINARY_NAME} locally...${NC}" >&2
     
     if ! command -v go >/dev/null 2>&1; then
         echo -e "${RED}Error: Go is required to build locally. Install Go or use a pre-built release.${NC}" >&2

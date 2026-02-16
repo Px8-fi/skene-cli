@@ -82,22 +82,22 @@ build_local() {
     
     if [ -f "Makefile" ]; then
         # Try 'make build' first, fall back to 'make' if build target doesn't exist
-        # Capture output to see what's happening
-        if make build 2>&1; then
+        # Redirect all output to stderr so stdout only contains the path
+        if make build >&2 2>&1; then
             :
-        elif make 2>&1; then
+        elif make >&2 2>&1; then
             :
         else
-            echo -e "${YELLOW}Makefile build failed. Trying go build directly...${NC}"
+            echo -e "${YELLOW}Makefile build failed. Trying go build directly...${NC}" >&2
             mkdir -p build
-            if ! go build -o "build/$BINARY_NAME" ./cmd/skene 2>&1; then
+            if ! go build -o "build/$BINARY_NAME" ./cmd/skene >&2 2>&1; then
                 echo -e "${RED}Error: Build failed${NC}" >&2
                 return 1
             fi
         fi
     else
         mkdir -p build
-        if ! go build -o "build/$BINARY_NAME" ./cmd/skene 2>&1; then
+        if ! go build -o "build/$BINARY_NAME" ./cmd/skene >&2 2>&1; then
             echo -e "${RED}Error: Build failed. Make sure you're in the project root directory.${NC}" >&2
             return 1
         fi
@@ -271,26 +271,36 @@ main() {
                         
                         if [ $build_exit_code -eq 0 ] && [ -n "$rel_path" ]; then
                             echo -e "${GREEN}Build successful!${NC}"
+                            echo -e "${BLUE}Build returned path: ${rel_path}${NC}"
                             # Make path absolute - build_local returns relative path like "build/skene"
                             if [ "$(echo "$rel_path" | cut -c1)" = "/" ]; then
                                 binary_file="$rel_path"
                             else
                                 binary_file="${clone_dir}/${rel_path}"
                             fi
+                            echo -e "${BLUE}Absolute path: ${binary_file}${NC}"
                             # Verify the binary actually exists
                             if [ ! -f "$binary_file" ]; then
                                 echo -e "${RED}Error: Binary not found at ${binary_file}${NC}" >&2
                                 echo -e "${YELLOW}Checking build directory...${NC}" >&2
                                 ls -la "${clone_dir}/build/" 2>&1 || echo "Build directory doesn't exist" >&2
+                                echo -e "${YELLOW}Current directory: $(pwd)${NC}" >&2
+                                echo -e "${YELLOW}Looking for: ${BINARY_NAME}${NC}" >&2
+                                find "${clone_dir}" -name "${BINARY_NAME}" -type f 2>/dev/null | head -5 >&2
                                 cd "$original_dir"
                                 rm -rf "$temp_dir"
                                 exit 1
                             fi
-                            echo -e "${BLUE}Binary found at: ${binary_file}${NC}"
+                            echo -e "${GREEN}Binary verified at: ${binary_file}${NC}"
                             # Return to original directory
                             cd "$original_dir"
                         else
-                            echo -e "${RED}Build failed.${NC}" >&2
+                            echo -e "${RED}Build failed (exit code: ${build_exit_code})${NC}" >&2
+                            if [ -n "$rel_path" ]; then
+                                echo -e "${YELLOW}Build returned: ${rel_path}${NC}" >&2
+                            else
+                                echo -e "${YELLOW}Build returned empty path${NC}" >&2
+                            fi
                             cd "$original_dir"
                             rm -rf "$temp_dir"
                             exit 1
@@ -325,6 +335,13 @@ main() {
     
     if [ -z "$binary_file" ] || [ ! -f "$binary_file" ]; then
         echo -e "${RED}Error: Could not obtain binary${NC}" >&2
+        echo -e "${YELLOW}Debug info:${NC}" >&2
+        echo -e "  binary_file: '${binary_file}'" >&2
+        echo -e "  binary_file empty: $([ -z "$binary_file" ] && echo "yes" || echo "no")" >&2
+        echo -e "  binary_file exists: $([ -f "$binary_file" ] && echo "yes" || echo "no")" >&2
+        if [ -n "$binary_file" ]; then
+            echo -e "  Checking: $(ls -la "$binary_file" 2>&1)" >&2
+        fi
         # Clean up temp directory if we cloned the repo
         if [ -n "$temp_dir" ] && [ -d "$temp_dir" ]; then
             rm -rf "$temp_dir"

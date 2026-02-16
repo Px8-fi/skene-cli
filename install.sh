@@ -82,12 +82,13 @@ build_local() {
     
     if [ -f "Makefile" ]; then
         # Try 'make build' first, fall back to 'make' if build target doesn't exist
-        if make build 2>/dev/null; then
+        # Capture output to see what's happening
+        if make build 2>&1; then
             :
-        elif make 2>/dev/null; then
+        elif make 2>&1; then
             :
         else
-            echo -e "${YELLOW}Makefile found but build target failed. Trying go build directly...${NC}"
+            echo -e "${YELLOW}Makefile build failed. Trying go build directly...${NC}"
             mkdir -p build
             if ! go build -o "build/$BINARY_NAME" ./cmd/skene 2>&1; then
                 echo -e "${RED}Error: Build failed${NC}" >&2
@@ -262,12 +263,30 @@ main() {
                     cd "${clone_dir}"
                     if [ -f "go.mod" ]; then
                         echo -e "${BLUE}Building from source...${NC}"
-                        if binary_file=$(build_local); then
+                        echo -e "${YELLOW}Note: This may take a few minutes if Rust engine needs to be built...${NC}"
+                        # build_local outputs path to stdout, errors to stderr
+                        # Capture stdout for path, let stderr show errors
+                        rel_path=$(build_local)
+                        build_exit_code=$?
+                        
+                        if [ $build_exit_code -eq 0 ] && [ -n "$rel_path" ]; then
                             echo -e "${GREEN}Build successful!${NC}"
-                            # Make path absolute
-                            if [ ! "$(echo "$binary_file" | cut -c1)" = "/" ]; then
-                                binary_file="${clone_dir}/${binary_file}"
+                            # Make path absolute - build_local returns relative path like "build/skene"
+                            if [ "$(echo "$rel_path" | cut -c1)" = "/" ]; then
+                                binary_file="$rel_path"
+                            else
+                                binary_file="${clone_dir}/${rel_path}"
                             fi
+                            # Verify the binary actually exists
+                            if [ ! -f "$binary_file" ]; then
+                                echo -e "${RED}Error: Binary not found at ${binary_file}${NC}" >&2
+                                echo -e "${YELLOW}Checking build directory...${NC}" >&2
+                                ls -la "${clone_dir}/build/" 2>&1 || echo "Build directory doesn't exist" >&2
+                                cd "$original_dir"
+                                rm -rf "$temp_dir"
+                                exit 1
+                            fi
+                            echo -e "${BLUE}Binary found at: ${binary_file}${NC}"
                             # Return to original directory
                             cd "$original_dir"
                         else

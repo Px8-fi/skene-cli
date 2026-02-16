@@ -266,41 +266,61 @@ main() {
                         echo -e "${YELLOW}Note: This may take a few minutes if Rust engine needs to be built...${NC}"
                         # build_local outputs path to stdout, errors to stderr
                         # Capture stdout for path, let stderr show errors
-                        rel_path=$(build_local)
+                        rel_path=$(build_local 2>/dev/null | tail -1)  # Get last line only, ignore stderr
                         build_exit_code=$?
                         
-                        if [ $build_exit_code -eq 0 ] && [ -n "$rel_path" ]; then
-                            echo -e "${GREEN}Build successful!${NC}"
-                            echo -e "${BLUE}Build returned path: ${rel_path}${NC}"
-                            # Make path absolute - build_local returns relative path like "build/skene"
-                            if [ "$(echo "$rel_path" | cut -c1)" = "/" ]; then
-                                binary_file="$rel_path"
-                            else
-                                binary_file="${clone_dir}/${rel_path}"
+                        # If build succeeded but no path, check if binary exists directly
+                        if [ $build_exit_code -eq 0 ]; then
+                            # Clean up rel_path (remove whitespace/newlines)
+                            rel_path=$(echo "$rel_path" | tr -d '\n\r' | xargs)
+                            
+                            # If rel_path is empty, try to find the binary
+                            if [ -z "$rel_path" ]; then
+                                if [ -f "build/${BINARY_NAME}" ]; then
+                                    rel_path="build/${BINARY_NAME}"
+                                else
+                                    echo -e "${YELLOW}Build completed but path not returned. Searching for binary...${NC}" >&2
+                                    found_binary=$(find . -name "${BINARY_NAME}" -type f -path "*/build/*" 2>/dev/null | head -1)
+                                    if [ -n "$found_binary" ]; then
+                                        rel_path="$found_binary"
+                                    fi
+                                fi
                             fi
-                            echo -e "${BLUE}Absolute path: ${binary_file}${NC}"
-                            # Verify the binary actually exists
-                            if [ ! -f "$binary_file" ]; then
-                                echo -e "${RED}Error: Binary not found at ${binary_file}${NC}" >&2
+                            
+                            if [ -n "$rel_path" ]; then
+                                echo -e "${GREEN}Build successful!${NC}"
+                                # Make path absolute - build_local returns relative path like "build/skene"
+                                if [ "$(echo "$rel_path" | cut -c1)" = "/" ]; then
+                                    binary_file="$rel_path"
+                                else
+                                    binary_file="${clone_dir}/${rel_path}"
+                                fi
+                                # Verify the binary actually exists
+                                if [ ! -f "$binary_file" ]; then
+                                    echo -e "${RED}Error: Binary not found at ${binary_file}${NC}" >&2
+                                    echo -e "${YELLOW}Checking build directory...${NC}" >&2
+                                    ls -la "${clone_dir}/build/" 2>&1 || echo "Build directory doesn't exist" >&2
+                                    echo -e "${YELLOW}Current directory: $(pwd)${NC}" >&2
+                                    echo -e "${YELLOW}Looking for: ${BINARY_NAME}${NC}" >&2
+                                    find "${clone_dir}" -name "${BINARY_NAME}" -type f 2>/dev/null | head -5 >&2
+                                    cd "$original_dir"
+                                    rm -rf "$temp_dir"
+                                    exit 1
+                                fi
+                                echo -e "${GREEN}Binary verified at: ${binary_file}${NC}"
+                                # Return to original directory
+                                cd "$original_dir"
+                            else
+                                echo -e "${RED}Error: Build succeeded but binary path not found${NC}" >&2
                                 echo -e "${YELLOW}Checking build directory...${NC}" >&2
                                 ls -la "${clone_dir}/build/" 2>&1 || echo "Build directory doesn't exist" >&2
-                                echo -e "${YELLOW}Current directory: $(pwd)${NC}" >&2
-                                echo -e "${YELLOW}Looking for: ${BINARY_NAME}${NC}" >&2
                                 find "${clone_dir}" -name "${BINARY_NAME}" -type f 2>/dev/null | head -5 >&2
                                 cd "$original_dir"
                                 rm -rf "$temp_dir"
                                 exit 1
                             fi
-                            echo -e "${GREEN}Binary verified at: ${binary_file}${NC}"
-                            # Return to original directory
-                            cd "$original_dir"
                         else
                             echo -e "${RED}Build failed (exit code: ${build_exit_code})${NC}" >&2
-                            if [ -n "$rel_path" ]; then
-                                echo -e "${YELLOW}Build returned: ${rel_path}${NC}" >&2
-                            else
-                                echo -e "${YELLOW}Build returned empty path${NC}" >&2
-                            fi
                             cd "$original_dir"
                             rm -rf "$temp_dir"
                             exit 1

@@ -9,7 +9,7 @@ This guide is for team members testing the new installation script.
 Test the one-liner installation from GitHub:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/Rust-impelementation/install.sh | bash
 ```
 
 **What to check:**
@@ -103,7 +103,7 @@ Run this to test everything:
 
 ```bash
 # Test installation
-curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/Rust-impelementation/install.sh | bash
 
 # Verify it works
 skene --version || skene --help || echo "skene command found at: $(which skene)"

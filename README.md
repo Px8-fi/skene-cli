@@ -30,17 +30,31 @@ A beautiful, production-ready terminal installer and configuration tool for [ske
 
 ## Installation
 
+> **Note:** If this is a private repository, you'll need to either:
+> - Make the repository public, OR
+> - Download the install script manually from GitHub releases, OR
+> - Clone the repository and run `./install.sh` from the project directory
+
 ### Quick Install (Recommended)
 
 Install `skene` with a single command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/Rust-impelementation/install.sh | bash
+```
+
+**For private repositories:** If the above doesn't work, clone the repo and run the install script locally:
+
+```bash
+git clone https://github.com/Px8-fi/skene-cli
+cd skene-cli
+./install.sh
 ```
 
 This will:
 - Automatically detect your platform (macOS, Linux, or Windows)
-- Download the appropriate binary from the latest GitHub release
+- Download the appropriate binary from the latest GitHub release (if public)
+- Or build from source if releases aren't available
 - Install to `/usr/local/bin/skene`
 - Make it executable and verify installation
 
@@ -50,7 +64,7 @@ If you prefer to download the script first:
 
 ```bash
 # Download the install script
-curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh -o install.sh
+curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/Rust-impelementation/install.sh -o install.sh
 
 # Make it executable
 chmod +x install.sh
@@ -79,7 +93,7 @@ export INSTALL_DIR=~/bin
 Install a specific release version:
 
 ```bash
-VERSION=v1.0.0 curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh | bash
+VERSION=v1.0.0 curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/Rust-impelementation/install.sh | bash
 ```
 
 ### Local Development Installation

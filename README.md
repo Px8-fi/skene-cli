@@ -24,9 +24,128 @@ A beautiful, production-ready terminal installer and configuration tool for [ske
 
 ## Prerequisites
 
-- Go 1.22 or later
+- Go 1.22 or later (for building from source)
 - Python 3.11+ (required for skene-growth)
 - `uv` runtime (will be installed automatically if missing)
+
+## Installation
+
+### Quick Install (Recommended)
+
+Install `skene` with a single command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh | bash
+```
+
+This will:
+- Automatically detect your platform (macOS, Linux, or Windows)
+- Download the appropriate binary from the latest GitHub release
+- Install to `/usr/local/bin/skene`
+- Make it executable and verify installation
+
+### Manual Installation
+
+If you prefer to download the script first:
+
+```bash
+# Download the install script
+curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh -o install.sh
+
+# Make it executable
+chmod +x install.sh
+
+# Run the installer
+./install.sh
+```
+
+### Custom Installation Location
+
+Install to a custom directory (no sudo required):
+
+```bash
+INSTALL_DIR=~/bin ./install.sh
+```
+
+Or set it as an environment variable:
+
+```bash
+export INSTALL_DIR=~/bin
+./install.sh
+```
+
+### Install Specific Version
+
+Install a specific release version:
+
+```bash
+VERSION=v1.0.0 curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh | bash
+```
+
+### Local Development Installation
+
+If you're working on the project locally:
+
+```bash
+# Clone the repository
+git clone https://github.com/Px8-fi/skene-cli
+cd skene-cli
+
+# Build the project
+make build
+
+# Install using the script (uses local build)
+./install.sh
+
+# Or force local build
+USE_LOCAL=true ./install.sh
+```
+
+The install script will automatically detect you're in the repository directory and use the local `build/skene` binary if available.
+
+### Build from Source
+
+For developers who want to build from source:
+
+```bash
+# Clone the repository
+git clone https://github.com/Px8-fi/skene-cli
+cd skene-cli
+
+# Install Go dependencies
+make install
+
+# Build for your platform
+make build
+
+# Or build for all platforms
+make build-all
+
+# Install manually
+sudo cp build/skene /usr/local/bin/
+```
+
+### Verify Installation
+
+After installation, verify it works:
+
+```bash
+skene --version
+# or
+skene --help
+```
+
+If the command is not found, make sure `/usr/local/bin` is in your PATH:
+
+```bash
+# Add to ~/.zshrc (macOS/Linux with zsh)
+echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+
+# Add to ~/.bashrc (Linux with bash)
+echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+```
 
 ## Quick Start
 
@@ -34,8 +153,8 @@ A beautiful, production-ready terminal installer and configuration tool for [ske
 
 ```bash
 # Clone the repository
-git clone https://github.com/skene-ai/skene-terminal-v2
-cd skene-terminal-v2
+git clone https://github.com/Px8-fi/skene-cli
+cd skene-cli
 
 # Install dependencies and build
 make install
@@ -329,5 +448,5 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## Support
 
 - 📖 [Documentation](https://docs.skene.ai)
-- 🐛 [Issues](https://github.com/skene-ai/skene-terminal-v2/issues)
+- 🐛 [Issues](https://github.com/Px8-fi/skene-cli/issues)
 - 💬 [Discord](https://discord.gg/skene)

@@ -103,13 +103,40 @@ build_local() {
         fi
     fi
     
+    # Look for the binary in multiple locations
+    # 1. build/skene (standard location)
     if [ -f "build/$BINARY_NAME" ]; then
         echo "build/$BINARY_NAME"
         return 0
-    else
-        echo -e "${RED}Error: Build completed but binary not found at build/$BINARY_NAME${NC}" >&2
-        return 1
     fi
+    
+    # 2. build/skene-<os>-<arch> (platform-specific name)
+    local os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
+    local arch_name=$(uname -m)
+    case "$arch_name" in
+        x86_64|amd64) arch_name="amd64" ;;
+        arm64|aarch64) arch_name="arm64" ;;
+    esac
+    if [ -f "build/${BINARY_NAME}-${os_name}-${arch_name}" ]; then
+        echo "build/${BINARY_NAME}-${os_name}-${arch_name}"
+        return 0
+    fi
+    
+    # 3. ./skene (root of repo)
+    if [ -f "./$BINARY_NAME" ]; then
+        echo "./$BINARY_NAME"
+        return 0
+    fi
+    
+    # 4. Search for it
+    local found=$(find . -name "$BINARY_NAME" -type f -not -path "*/.git/*" -not -path "*/engine/*" 2>/dev/null | head -1)
+    if [ -n "$found" ]; then
+        echo "$found"
+        return 0
+    fi
+    
+    echo -e "${RED}Error: Build completed but binary not found${NC}" >&2
+    return 1
 }
 
 # Download binary

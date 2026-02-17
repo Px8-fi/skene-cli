@@ -32,20 +32,32 @@ func NewNextStepsView() *NextStepsView {
 		actions: []NextStepAction{
 			{
 				ID:          "plan",
-				Name:        "Generate Growth Roadmap",
-				Description: "Create a detailed growth plan with prioritized loops",
-				Command:     "", // Handled internally
+				Name:        "Generate Growth Plan",
+				Description: "Create a prioritized growth plan with implementation roadmap",
+				Command:     "uvx skene-growth plan",
 			},
 			{
-				ID:          "open",
-				Name:        "Open Generated Files",
-				Description: "View the output in ./skene-context/",
-				Command:     "",
+				ID:          "build",
+				Name:        "Build Implementation Prompt",
+				Description: "Generate a ready-to-use prompt for Cursor, Claude, or other AI tools",
+				Command:     "uvx skene-growth build",
+			},
+			{
+				ID:          "status",
+				Name:        "Check Loop Status",
+				Description: "Verify which growth loop requirements are implemented",
+				Command:     "uvx skene-growth status",
 			},
 			{
 				ID:          "rerun",
 				Name:        "Re-run Analysis",
-				Description: "Run the analysis again with different settings",
+				Description: "Analyze the codebase again with the current configuration",
+				Command:     "uvx skene-growth analyze .",
+			},
+			{
+				ID:          "open",
+				Name:        "Open Generated Files",
+				Description: "View the analysis output in ./skene-context/",
 				Command:     "",
 			},
 			{
@@ -57,7 +69,7 @@ func NewNextStepsView() *NextStepsView {
 			{
 				ID:          "exit",
 				Name:        "Exit",
-				Description: "Close the wizard",
+				Description: "Close Skene Growth",
 				Command:     "",
 			},
 		},
@@ -107,7 +119,7 @@ func (v *NextStepsView) Render() string {
 	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
 	// Success message
-	successMsg := styles.SuccessText.Render("✓ Analysis complete! What would you like to do next?")
+	successMsg := styles.SuccessText.Render("Analysis complete! What would you like to do next?")
 
 	// Actions list
 	actionsSection := v.renderActions(sectionWidth)
@@ -180,7 +192,9 @@ func (v *NextStepsView) renderCommandPreview(width int) string {
 		return ""
 	}
 
-	preview := styles.Muted.Render("Command: ") + styles.Accent.Render(action.Command)
+	cmdLabel := styles.Muted.Render("Command: ")
+	cmdValue := styles.Accent.Render(action.Command)
+	preview := cmdLabel + cmdValue
 	return lipgloss.NewStyle().
 		Width(width).
 		Align(lipgloss.Center).
@@ -192,6 +206,7 @@ func (v *NextStepsView) GetHelpItems() []components.HelpItem {
 	return []components.HelpItem{
 		{Key: "↑/↓", Desc: "navigate"},
 		{Key: "enter", Desc: "select"},
+		{Key: "esc", Desc: "back to results"},
 		{Key: "ctrl+c", Desc: "quit"},
 	}
 }

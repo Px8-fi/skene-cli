@@ -18,7 +18,6 @@ use skene_engine::{
     strategies::context::AnalysisContext,
 };
 use std::path::PathBuf;
-use serde_json::json;
 
 #[tokio::main]
 async fn main() {
@@ -43,6 +42,8 @@ async fn run() -> Result<()> {
     match input.command.as_str() {
         "analyze" => run_analyze(input).await?,
         "plan" => run_plan(input).await?,
+        "build" => run_build(input).await?,
+        "status" => run_status(input).await?,
         _ => return Err(anyhow::anyhow!("Unknown command: {}", input.command)),
     }
 
@@ -137,23 +138,44 @@ async fn run_analyze(input: EngineInput) -> Result<()> {
 }
 
 async fn run_plan(input: EngineInput) -> Result<()> {
+    let on_progress = |phase: &str, msg: String, p: f64| {
+        let output = EngineOutput::Progress {
+            phase: phase.to_string(),
+            step: 0,
+            total_steps: 0,
+            progress: p,
+            message: msg,
+        };
+        println!("{}", serde_json::to_string(&output).unwrap());
+    };
+
+    on_progress("plan", "Loading manifest...".to_string(), 0.1);
+
     // Read manifest
     let manifest_path = input.manifest_path.ok_or_else(|| anyhow::anyhow!("Manifest path required for plan"))?;
     let manifest_str = tokio::fs::read_to_string(&manifest_path).await?;
     let manifest: GrowthManifest = serde_json::from_str(&manifest_str)?;
-    
+
+    on_progress("plan", "Connecting to LLM provider...".to_string(), 0.2);
+
     let llm_client = create_llm_client(&input.provider, &input.api_key, &input.model, input.base_url.as_deref())
         .map_err(|e| anyhow::anyhow!(e))?;
     
     let output_path = PathBuf::from(&input.output_dir).join("growth-plan.md");
+
+    on_progress("plan", "Generating growth plan...".to_string(), 0.4);
     
     let plan_content = if input.onboarding.unwrap_or(false) {
         Planner::generate_onboarding_memo(llm_client.as_ref(), &manifest).await?
     } else {
         Planner::generate_council_memo(llm_client.as_ref(), &manifest).await?
     };
+
+    on_progress("plan", "Writing plan to disk...".to_string(), 0.9);
     
     write_file(&output_path, &plan_content).await?;
+
+    on_progress("plan", "Growth plan generated".to_string(), 1.0);
     
     let output = EngineOutput::Result {
         manifest_path: Some(manifest_path),
@@ -164,4 +186,187 @@ async fn run_plan(input: EngineInput) -> Result<()> {
     println!("{}", serde_json::to_string(&output).unwrap());
     
     Ok(())
+}
+
+async fn run_build(input: EngineInput) -> Result<()> {
+    let on_progress = |phase: &str, msg: String, p: f64| {
+        let output = EngineOutput::Progress {
+            phase: phase.to_string(),
+            step: 0,
+            total_steps: 0,
+            progress: p,
+            message: msg,
+        };
+        println!("{}", serde_json::to_string(&output).unwrap());
+    };
+
+    on_progress("build", "Loading manifest...".to_string(), 0.1);
+
+    // Read manifest
+    let output_dir = PathBuf::from(&input.output_dir);
+    let manifest_path = input.manifest_path
+        .map(PathBuf::from)
+        .unwrap_or_else(|| output_dir.join("growth-manifest.json"));
+
+    let manifest_str = tokio::fs::read_to_string(&manifest_path).await
+        .map_err(|_| anyhow::anyhow!("No manifest found at {}. Run analysis first.", manifest_path.display()))?;
+    let manifest: GrowthManifest = serde_json::from_str(&manifest_str)?;
+
+    on_progress("build", "Connecting to LLM provider...".to_string(), 0.2);
+
+    let llm_client = create_llm_client(&input.provider, &input.api_key, &input.model, input.base_url.as_deref())
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    on_progress("build", "Generating implementation prompt...".to_string(), 0.4);
+
+    let manifest_summary = format_manifest_for_prompt(&manifest);
+    let prompt = format!(
+        "You are an expert AI coding assistant prompt engineer.\n\n\
+        Based on the following growth manifest, generate a detailed implementation prompt \
+        that a developer can paste directly into Cursor, Claude, or another AI coding tool \
+        to implement the top-priority growth features.\n\n\
+        The prompt should:\n\
+        1. Be specific to the codebase's tech stack ({lang}{fw})\n\
+        2. Reference actual file paths from the manifest\n\
+        3. Include step-by-step implementation instructions\n\
+        4. Focus on the highest-priority growth opportunities\n\
+        5. Be copy-paste ready\n\n\
+        ## Manifest\n{manifest_summary}",
+        lang = manifest.tech_stack.language,
+        fw = manifest.tech_stack.framework.as_deref().map(|f| format!(", {}", f)).unwrap_or_default(),
+        manifest_summary = manifest_summary,
+    );
+
+    let build_content = llm_client.generate_content(&prompt).await
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    on_progress("build", "Writing implementation prompt...".to_string(), 0.9);
+
+    let output_path = output_dir.join("implementation-prompt.md");
+    write_file(&output_path, &build_content).await?;
+
+    on_progress("build", "Implementation prompt generated".to_string(), 1.0);
+
+    let output = EngineOutput::Result {
+        manifest_path: Some(manifest_path.to_string_lossy().to_string()),
+        template_path: Some(output_path.to_string_lossy().to_string()),
+        docs_path: None,
+        plan_path: None,
+    };
+    println!("{}", serde_json::to_string(&output).unwrap());
+
+    Ok(())
+}
+
+async fn run_status(input: EngineInput) -> Result<()> {
+    let on_progress = |phase: &str, msg: String, p: f64| {
+        let output = EngineOutput::Progress {
+            phase: phase.to_string(),
+            step: 0,
+            total_steps: 0,
+            progress: p,
+            message: msg,
+        };
+        println!("{}", serde_json::to_string(&output).unwrap());
+    };
+
+    on_progress("status", "Loading manifest...".to_string(), 0.1);
+
+    let output_dir = PathBuf::from(&input.output_dir);
+    let manifest_path = input.manifest_path
+        .map(PathBuf::from)
+        .unwrap_or_else(|| output_dir.join("growth-manifest.json"));
+
+    let manifest_str = tokio::fs::read_to_string(&manifest_path).await
+        .map_err(|_| anyhow::anyhow!("No manifest found at {}. Run analysis first.", manifest_path.display()))?;
+    let manifest: GrowthManifest = serde_json::from_str(&manifest_str)?;
+
+    on_progress("status", "Scanning codebase for implementations...".to_string(), 0.3);
+
+    let base_dir = PathBuf::from(&input.project_dir);
+    let explorer = CodebaseExplorer::new(base_dir.clone(), Some(input.exclude_folders));
+
+    // Check which growth opportunities have been implemented by scanning the codebase
+    let llm_client = create_llm_client(&input.provider, &input.api_key, &input.model, input.base_url.as_deref())
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    on_progress("status", "Checking growth loop implementation status...".to_string(), 0.5);
+
+    let manifest_summary = format_manifest_for_prompt(&manifest);
+
+    // Get file tree for context
+    let file_tree = explorer.get_directory_tree(".", 4).await.unwrap_or_default();
+
+    let prompt = format!(
+        "You are a growth engineering auditor. Given the following growth manifest and current codebase structure, \
+        determine which growth features and opportunities have been implemented, which are in progress, and which are missing.\n\n\
+        Format your response as a status report:\n\n\
+        ## Growth Loop Status Report\n\n\
+        ### Implemented\n- [feature]: [evidence from file tree]\n\n\
+        ### In Progress\n- [feature]: [partial evidence]\n\n\
+        ### Not Started\n- [feature]: [what's needed]\n\n\
+        ### Summary\n- Total features: X\n- Implemented: X\n- In progress: X\n- Not started: X\n\n\
+        ## Manifest\n{manifest_summary}\n\n\
+        ## Current File Tree\n{file_tree}",
+        manifest_summary = manifest_summary,
+        file_tree = file_tree,
+    );
+
+    let status_content = llm_client.generate_content(&prompt).await
+        .map_err(|e| anyhow::anyhow!(e))?;
+
+    on_progress("status", "Writing status report...".to_string(), 0.9);
+
+    let output_path = output_dir.join("growth-status.md");
+    write_file(&output_path, &status_content).await?;
+
+    on_progress("status", "Status check complete".to_string(), 1.0);
+
+    let output = EngineOutput::Result {
+        manifest_path: Some(manifest_path.to_string_lossy().to_string()),
+        template_path: None,
+        docs_path: Some(output_path.to_string_lossy().to_string()),
+        plan_path: None,
+    };
+    println!("{}", serde_json::to_string(&output).unwrap());
+
+    Ok(())
+}
+
+fn format_manifest_for_prompt(manifest: &GrowthManifest) -> String {
+    let mut lines = Vec::new();
+    lines.push(format!("**Project:** {}", manifest.project_name));
+    if let Some(desc) = &manifest.description {
+        lines.push(format!("**Description:** {}", desc));
+    }
+    lines.push(format!("\n**Tech Stack:** {} {}", 
+        manifest.tech_stack.language,
+        manifest.tech_stack.framework.as_deref().unwrap_or("")));
+    if let Some(db) = &manifest.tech_stack.database {
+        lines.push(format!("**Database:** {}", db));
+    }
+    
+    if !manifest.current_growth_features.is_empty() {
+        lines.push(format!("\n**Existing Growth Features ({}):**", manifest.current_growth_features.len()));
+        for feat in &manifest.current_growth_features {
+            lines.push(format!("- {} (in {}, confidence: {:.0}%)", 
+                feat.feature_name, feat.file_path, feat.confidence_score * 100.0));
+        }
+    }
+    
+    if !manifest.growth_opportunities.is_empty() {
+        lines.push(format!("\n**Growth Opportunities ({}):**", manifest.growth_opportunities.len()));
+        for opp in &manifest.growth_opportunities {
+            lines.push(format!("- [{}] {}: {}", opp.priority.to_uppercase(), opp.feature_name, opp.description));
+        }
+    }
+
+    if !manifest.revenue_leakage.is_empty() {
+        lines.push(format!("\n**Revenue Leakage ({}):**", manifest.revenue_leakage.len()));
+        for leak in &manifest.revenue_leakage {
+            lines.push(format!("- [{}] {}: {}", leak.impact.to_uppercase(), leak.issue, leak.recommendation));
+        }
+    }
+    
+    lines.join("\n")
 }

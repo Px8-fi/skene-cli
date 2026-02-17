@@ -46,7 +46,17 @@ func NewAnalyzingView() *AnalyzingView {
 
 	return &AnalyzingView{
 		phases:   phases,
-		header:   components.NewWizardHeader(6, "Running Analysis"),
+		header:   components.NewWizardHeader(6, "Running Skene Growth Analysis"),
+		spinner:  components.NewSpinner(),
+		terminal: components.NewTerminalOutput(14, 300),
+	}
+}
+
+// NewCommandView creates a view for running a generic command with terminal output
+func NewCommandView(title string) *AnalyzingView {
+	return &AnalyzingView{
+		phases:   []AnalysisPhase{},
+		header:   components.NewTitleHeader(title),
 		spinner:  components.NewSpinner(),
 		terminal: components.NewTerminalOutput(14, 300),
 	}
@@ -149,6 +159,15 @@ func (v *AnalyzingView) HasFailed() bool {
 
 // GetOverallProgress returns overall progress 0.0-1.0
 func (v *AnalyzingView) GetOverallProgress() float64 {
+	if len(v.phases) == 0 {
+		if v.done {
+			return 1.0
+		}
+		if v.failed {
+			return 0.0
+		}
+		return 0.5
+	}
 	done := 0
 	for _, p := range v.phases {
 		if p.Done {
@@ -180,7 +199,7 @@ func (v *AnalyzingView) Render() string {
 		}
 	} else if v.done {
 		statusLine = styles.SuccessText.Render("✓ Complete")
-	} else if v.AllPhasesDone() {
+	} else if len(v.phases) > 0 && v.AllPhasesDone() {
 		statusLine = styles.SuccessText.Render("✓ Analysis complete")
 	} else {
 		currentPhase := ""
@@ -207,10 +226,19 @@ func (v *AnalyzingView) Render() string {
 	elapsed := styles.Muted.Render(fmt.Sprintf("Elapsed: %.1fs", v.elapsedTime))
 
 	// Footer
+	var footerContent string
+	if v.done || v.failed {
+		footerContent = components.FooterHelp([]components.HelpItem{
+			{Key: "esc", Desc: "go back"},
+			{Key: "ctrl+c", Desc: "quit"},
+		})
+	} else {
+		footerContent = components.WizardProgressHelp()
+	}
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
-		Render(components.WizardProgressHelp())
+		Render(footerContent)
 
 	// Combine
 	content := lipgloss.JoinVertical(

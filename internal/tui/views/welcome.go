@@ -69,7 +69,7 @@ func (v *WelcomeView) Render() string {
 	cta := center.Render(enterKey)
 
 	// Version info
-	version := center.Render(styles.Muted.Render("v0.1.8 • github.com/SkeneTechnologies/skene-growth"))
+	version := center.Render(styles.Muted.Render("v0.2.0 • github.com/SkeneTechnologies/skene-growth"))
 
 	// Footer help
 	footer := components.FooterHelp([]components.HelpItem{
@@ -113,7 +113,7 @@ func (v *WelcomeView) Render() string {
 // GetHelpItems returns context-specific help
 func (v *WelcomeView) GetHelpItems() []components.HelpItem {
 	return []components.HelpItem{
-		{Key: "enter", Desc: "start wizard"},
+		{Key: "enter", Desc: "start"},
 		{Key: "?", Desc: "toggle help"},
 		{Key: "ctrl+c", Desc: "quit"},
 	}

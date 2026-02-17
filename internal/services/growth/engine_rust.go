@@ -172,6 +172,62 @@ func (e *RustEngine) GeneratePlan(manifestPath string, onboarding bool) *Analysi
 	return result
 }
 
+// GenerateBuild generates an implementation prompt from the manifest
+func (e *RustEngine) GenerateBuild() *AnalysisResult {
+	result := &AnalysisResult{}
+
+	manifestPath := filepath.Join(e.config.OutputDir, "growth-manifest.json")
+
+	input := EngineInput{
+		Command:      "build",
+		Provider:     e.config.Provider,
+		Model:        e.config.Model,
+		APIKey:       e.config.APIKey,
+		ProjectDir:   e.config.ProjectDir,
+		OutputDir:    e.config.OutputDir,
+		ManifestPath: &manifestPath,
+		Debug:        e.config.Verbose,
+	}
+
+	if e.config.BaseURL != "" {
+		input.BaseURL = &e.config.BaseURL
+	}
+
+	if err := e.execute(input, result); err != nil {
+		result.Error = err
+	}
+
+	return result
+}
+
+// CheckStatus checks growth loop implementation status
+func (e *RustEngine) CheckStatus() *AnalysisResult {
+	result := &AnalysisResult{}
+
+	manifestPath := filepath.Join(e.config.OutputDir, "growth-manifest.json")
+
+	input := EngineInput{
+		Command:      "status",
+		Provider:     e.config.Provider,
+		Model:        e.config.Model,
+		APIKey:       e.config.APIKey,
+		ProjectDir:   e.config.ProjectDir,
+		OutputDir:    e.config.OutputDir,
+		ManifestPath: &manifestPath,
+		Debug:        e.config.Verbose,
+	}
+
+	if e.config.BaseURL != "" {
+		input.BaseURL = &e.config.BaseURL
+	}
+
+	if err := e.execute(input, result); err != nil {
+		result.Error = err
+	}
+
+	return result
+}
+
 func (e *RustEngine) execute(input EngineInput, result *AnalysisResult) error {
 	cmd := exec.Command(e.binPath)
 	

@@ -42,6 +42,16 @@ func NewWizardHeader(currentStep int, stepName string) *WizardHeader {
 	}
 }
 
+// NewTitleHeader creates a header that only shows a title (no step counter or dots)
+func NewTitleHeader(title string) *WizardHeader {
+	return &WizardHeader{
+		CurrentStep: 0,
+		TotalSteps:  0,
+		StepName:    title,
+		Width:       80,
+	}
+}
+
 // SetWidth sets the header width
 func (h *WizardHeader) SetWidth(width int) {
 	h.Width = width
@@ -55,6 +65,11 @@ func (h *WizardHeader) SetStep(step int, name string) {
 
 // Render the wizard header
 func (h *WizardHeader) Render() string {
+	// Title-only mode (no step counter or dots)
+	if h.TotalSteps == 0 {
+		return styles.Title.Render(h.StepName)
+	}
+
 	// Step counter
 	stepCounter := styles.Muted.Render(fmt.Sprintf("Step %d of %d", h.CurrentStep, h.TotalSteps))
 

@@ -1,5 +1,34 @@
-use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Local};
+use serde::{Deserialize, Deserializer, Serialize};
+use chrono::{DateTime, Local, NaiveDateTime};
+
+/// Deserialize a Vec that may be null in JSON as an empty Vec
+fn null_as_empty_vec<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    let opt: Option<Vec<T>> = Option::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
+}
+
+/// Deserialize a datetime that may be naive (no timezone) or RFC 3339
+fn flexible_datetime<'de, D>(deserializer: D) -> Result<DateTime<Local>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = String::deserialize(deserializer)?;
+    // Try RFC 3339 first (with timezone)
+    if let Ok(dt) = DateTime::parse_from_rfc3339(&s) {
+        return Ok(dt.with_timezone(&Local));
+    }
+    // Try common formats without timezone
+    for fmt in &["%Y-%m-%dT%H:%M:%S%.f", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"] {
+        if let Ok(naive) = NaiveDateTime::parse_from_str(&s, fmt) {
+            return Ok(naive.and_local_timezone(Local).unwrap());
+        }
+    }
+    Err(serde::de::Error::custom(format!("unable to parse datetime: {}", s)))
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TechStack {
@@ -14,7 +43,7 @@ pub struct TechStack {
     pub deployment: Option<String>,
     #[serde(default)]
     pub package_manager: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty_vec")]
     pub services: Vec<String>,
 }
 
@@ -26,7 +55,7 @@ pub struct GrowthFeature {
     pub confidence_score: f64,
     #[serde(default)]
     pub entry_point: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty_vec")]
     pub growth_potential: Vec<String>,
 }
 
@@ -50,11 +79,11 @@ pub struct RevenueLeakage {
 pub struct IndustryInfo {
     #[serde(default)]
     pub primary: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty_vec")]
     pub secondary: Vec<String>,
     #[serde(default)]
     pub confidence: Option<f64>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty_vec")]
     pub evidence: Vec<String>,
 }
 
@@ -90,13 +119,13 @@ pub struct GrowthManifest {
     pub tech_stack: TechStack,
     #[serde(default)]
     pub industry: Option<IndustryInfo>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty_vec")]
     pub current_growth_features: Vec<GrowthFeature>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty_vec")]
     pub growth_opportunities: Vec<GrowthOpportunity>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty_vec")]
     pub revenue_leakage: Vec<RevenueLeakage>,
-    #[serde(default = "default_generated_at")]
+    #[serde(default = "default_generated_at", deserialize_with = "flexible_datetime")]
     pub generated_at: DateTime<Local>,
 }
 
@@ -120,13 +149,13 @@ pub struct DocsManifest {
     pub product_overview: Option<ProductOverview>,
     #[serde(default)]
     pub industry: Option<IndustryInfo>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty_vec")]
     pub features: Vec<Feature>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty_vec")]
     pub current_growth_features: Vec<GrowthFeature>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty_vec")]
     pub growth_opportunities: Vec<GrowthOpportunity>,
-    #[serde(default = "default_generated_at")]
+    #[serde(default = "default_generated_at", deserialize_with = "flexible_datetime")]
     pub generated_at: DateTime<Local>,
 }
 

@@ -9,13 +9,16 @@ import (
 
 // Config represents the skene-growth configuration
 type Config struct {
-	Provider   string `json:"provider"`
-	Model      string `json:"model"`
-	APIKey     string `json:"api_key"`
-	OutputDir  string `json:"output_dir"`
-	Verbose    bool   `json:"verbose"`
-	ProjectDir string `json:"project_dir"`
-	BaseURL    string `json:"base_url,omitempty"`
+	Provider     string `json:"provider"`
+	Model        string `json:"model"`
+	APIKey       string `json:"api_key"`
+	OutputDir    string `json:"output_dir"`
+	Verbose      bool   `json:"verbose"`
+	ProjectDir   string `json:"project_dir"`
+	BaseURL      string `json:"base_url,omitempty"`
+	UseGrowth    bool   `json:"use_growth"`
+	UseSkills    bool   `json:"use_skills"`
+	UseCookbook  bool   `json:"use_cookbook"`
 }
 
 // Manager handles configuration file operations
@@ -33,8 +36,11 @@ func NewManager(projectDir string) *Manager {
 		ProjectConfigPath: filepath.Join(projectDir, ".skene.config"),
 		UserConfigPath:    filepath.Join(homeDir, ".config", "skene", "config"),
 		Config: &Config{
-			OutputDir: "./skene-context",
-			Verbose:   true,
+			OutputDir:   "./skene-context",
+			Verbose:     true,
+			UseGrowth:   true,
+			UseSkills:   true,
+			UseCookbook: true,
 		},
 	}
 }

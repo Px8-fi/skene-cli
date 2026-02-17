@@ -445,6 +445,31 @@ func (e *Engine) saveOutputFiles(result *AnalysisResult) error {
 	return nil
 }
 
+// GeneratePlan generates a growth plan using the Rust engine
+func (e *Engine) GeneratePlan() *AnalysisResult {
+	if e.rustEngine == nil {
+		return &AnalysisResult{Error: fmt.Errorf("skene-engine binary not found: required for plan generation")}
+	}
+	manifestPath := filepath.Join(e.config.OutputDir, "growth-manifest.json")
+	return e.rustEngine.GeneratePlan(manifestPath, false)
+}
+
+// GenerateBuild generates an implementation prompt using the Rust engine
+func (e *Engine) GenerateBuild() *AnalysisResult {
+	if e.rustEngine == nil {
+		return &AnalysisResult{Error: fmt.Errorf("skene-engine binary not found: required for build")}
+	}
+	return e.rustEngine.GenerateBuild()
+}
+
+// CheckStatus checks growth loop implementation status using the Rust engine
+func (e *Engine) CheckStatus() *AnalysisResult {
+	if e.rustEngine == nil {
+		return &AnalysisResult{Error: fmt.Errorf("skene-engine binary not found: required for status check")}
+	}
+	return e.rustEngine.CheckStatus()
+}
+
 // sendUpdate sends a phase update to the UI
 func (e *Engine) sendUpdate(phase AnalysisPhase, progress float64, message string) {
 	if e.updateFn != nil {

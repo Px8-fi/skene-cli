@@ -16,6 +16,7 @@ import (
 	"skene-terminal-v2/internal/services/ide"
 	"skene-terminal-v2/internal/services/syscheck"
 	"skene-terminal-v2/internal/tui/components"
+	"skene-terminal-v2/internal/tui/styles"
 	"skene-terminal-v2/internal/tui/views"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -623,7 +624,12 @@ func (a *App) handleProviderKeys(msg tea.KeyMsg) tea.Cmd {
 	case "enter":
 		return a.selectProvider()
 	case "esc":
-		a.state = StateInstallMethod
+		// Only go back to install method if it was actually visited
+		if a.installMethodView != nil {
+			a.state = StateInstallMethod
+		} else {
+			a.state = StateWelcome
+		}
 	}
 	return nil
 }
@@ -720,10 +726,33 @@ func (a *App) handleLocalModelKeys(key string) tea.Cmd {
 func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 	key := msg.String()
 
+	// Handle existing analysis choice prompt
+	if a.projectDirView.IsAskingExistingChoice() {
+		switch key {
+		case "left", "h":
+			a.projectDirView.HandleLeft()
+		case "right", "l":
+			a.projectDirView.HandleRight()
+		case "enter":
+			choice := a.projectDirView.GetExistingChoiceLabel()
+			a.configMgr.SetProjectDir(a.projectDirView.GetProjectDir())
+			switch choice {
+			case "View Analysis":
+				a.projectDirView.SetExistingChoice(true)
+				a.transitionToResultsFromExisting()
+			case "Rerun Analysis":
+				a.projectDirView.SetExistingChoice(false)
+				a.transitionToAnalysisConfig()
+			}
+		case "esc":
+			a.projectDirView.DismissExistingChoice()
+		}
+		return nil
+	}
+
 	// Handle browsing mode
 	if a.projectDirView.IsBrowsing() {
 		if a.projectDirView.BrowseFocusOnList() {
-			// Focus is on the directory listing
 			switch key {
 			case "up", "k", "down", "j", "backspace", ".":
 				a.projectDirView.HandleBrowseKey(key)
@@ -735,7 +764,6 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 				a.projectDirView.StopBrowsing()
 			}
 		} else {
-			// Focus is on the browse buttons
 			switch key {
 			case "left", "h":
 				a.projectDirView.HandleBrowseLeft()
@@ -762,6 +790,10 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 		switch key {
 		case "enter":
 			if a.projectDirView.IsValid() {
+				// Check for existing analysis first
+				if a.projectDirView.CheckForExistingAnalysis() {
+					return nil
+				}
 				a.configMgr.SetProjectDir(a.projectDirView.GetProjectDir())
 				a.transitionToAnalysisConfig()
 			}
@@ -787,6 +819,10 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 				a.projectDirView.StartBrowsing()
 			case "Continue":
 				if a.projectDirView.IsValid() {
+					// Check for existing analysis first
+					if a.projectDirView.CheckForExistingAnalysis() {
+						return nil
+					}
 					a.configMgr.SetProjectDir(a.projectDirView.GetProjectDir())
 					a.transitionToAnalysisConfig()
 				}
@@ -816,15 +852,18 @@ func (a *App) handleAnalysisConfigKeys(key string) tea.Cmd {
 		if a.analysisConfigView.IsDefaultMode() {
 			btn := a.analysisConfigView.GetButtonLabel()
 			if btn == "Yes" {
+				a.applyAnalysisConfig()
 				return a.startAnalysis()
 			} else {
 				a.analysisConfigView.SetCustomMode()
 			}
 		} else {
+			a.applyAnalysisConfig()
 			return a.startAnalysis()
 		}
 	case "y":
 		if a.analysisConfigView.IsDefaultMode() {
+			a.applyAnalysisConfig()
 			return a.startAnalysis()
 		}
 	case "n":
@@ -875,7 +914,7 @@ func (a *App) handleResultsKeys(key string) tea.Cmd {
 		a.resultsView.HandleDown()
 	case "tab":
 		a.resultsView.HandleTab()
-	case "n":
+	case "n", "enter":
 		a.state = StateNextSteps
 		a.nextStepsView = views.NewNextStepsView()
 		a.nextStepsView.SetSize(a.width, a.height)
@@ -902,14 +941,12 @@ func (a *App) handleNextStepsKeys(key string) tea.Cmd {
 		case "config":
 			a.state = StateProviderSelect
 		case "plan":
-			return a.startPlan()
-		case "validate":
-			// Validate logic if needed, or remove
-			if action.Command != "" {
-				return a.runNextStepCommand(action.Command)
-			}
+			return a.runEngineCommand("Generating Growth Plan", "plan")
+		case "build":
+			return a.runEngineCommand("Building Implementation Prompt", "build")
+		case "status":
+			return a.runEngineCommand("Checking Loop Status", "status")
 		case "open":
-			// Open the output directory in the system file manager
 			outputDir := a.configMgr.Config.OutputDir
 			if outputDir == "" {
 				outputDir = "./skene-context"
@@ -932,15 +969,14 @@ func (a *App) handleErrorKeys(key string) tea.Cmd {
 		btn := a.errorView.GetSelectedButton()
 		switch btn {
 		case "Retry":
-			// Go back to previous state and retry
 			a.state = a.prevState
-		case "View Logs":
-			a.errorView.ToggleLogs()
+		case "Go Back":
+			a.navigateBackFromError()
 		case "Quit":
 			return tea.Quit
 		}
-	case "L":
-		a.errorView.ToggleLogs()
+	case "esc":
+		a.navigateBackFromError()
 	}
 	return nil
 }
@@ -1091,6 +1127,32 @@ func (a *App) transitionToAnalysisConfig() {
 	a.state = StateAnalysisConfig
 }
 
+func (a *App) transitionToResultsFromExisting() {
+	projectDir := a.configMgr.Config.ProjectDir
+	outputDir := filepath.Join(projectDir, "skene-context")
+
+	// Try to load existing analysis files
+	growthPlan := loadFileContent(filepath.Join(outputDir, "growth-plan.md"))
+	if growthPlan == "" {
+		growthPlan = loadFileContent(filepath.Join(outputDir, "growth-template.json"))
+	}
+	manifest := loadFileContent(filepath.Join(outputDir, "growth-manifest.json"))
+	productDocs := loadFileContent(filepath.Join(outputDir, "product-docs.md"))
+
+	a.resultsView = views.NewResultsViewWithContent(growthPlan, manifest, productDocs)
+	a.resultsView.SetSize(a.width, a.height)
+	a.state = StateResults
+}
+
+func (a *App) applyAnalysisConfig() {
+	if a.analysisConfigView != nil {
+		a.configMgr.Config.UseGrowth = a.analysisConfigView.GetUseGrowth()
+		a.configMgr.Config.UseSkills = a.analysisConfigView.GetUseSkills()
+		a.configMgr.Config.UseCookbook = a.analysisConfigView.GetUseCookbook()
+		a.configMgr.Config.Verbose = true
+	}
+}
+
 func (a *App) navigateBackFromAPIKey() {
 	if a.selectedProvider != nil {
 		if a.selectedProvider.ID == "skene" {
@@ -1111,6 +1173,55 @@ func (a *App) navigateBackFromProjectDir() {
 	} else {
 		a.state = StateAPIKey
 	}
+}
+
+func (a *App) navigateBackFromError() {
+	// Navigate to the state that preceded the error, but only if
+	// its view is initialized. Fall back to provider select which is always initialized.
+	target := a.prevState
+	switch target {
+	case StateInstallMethod:
+		if a.installMethodView == nil {
+			target = StateWelcome
+		}
+	case StateSysCheck:
+		if a.sysCheckView == nil {
+			target = StateWelcome
+		}
+	case StateInstalling:
+		if a.installingView == nil {
+			target = StateProviderSelect
+		}
+	case StateModelSelect:
+		if a.modelView == nil {
+			target = StateProviderSelect
+		}
+	case StateAuth:
+		if a.authView == nil {
+			target = StateProviderSelect
+		}
+	case StateAPIKey:
+		if a.apiKeyView == nil {
+			target = StateProviderSelect
+		}
+	case StateLocalModel:
+		if a.localModelView == nil {
+			target = StateProviderSelect
+		}
+	case StateProjectDir:
+		if a.projectDirView == nil {
+			target = StateProviderSelect
+		}
+	case StateAnalysisConfig:
+		if a.analysisConfigView == nil {
+			target = StateProjectDir
+		}
+	case StateAnalyzing:
+		if a.analyzingView == nil {
+			target = StateProjectDir
+		}
+	}
+	a.state = target
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1200,15 +1311,12 @@ func (a *App) startRealAnalysisCmd(p *tea.Program) tea.Cmd {
 	}
 }
 
-func (a *App) startPlan() tea.Cmd {
-	a.analyzingView = views.NewAnalyzingView()
+func (a *App) runEngineCommand(title string, command string) tea.Cmd {
+	a.analyzingView = views.NewCommandView(title)
 	a.analyzingView.SetSize(a.width, a.height)
 	a.analysisStartTime = time.Now()
 	a.state = StateAnalyzing
-	return a.startPlanCmd()
-}
 
-func (a *App) startPlanCmd() tea.Cmd {
 	cfg := growth.EngineConfig{
 		Provider:   a.configMgr.Config.Provider,
 		Model:      a.configMgr.Config.Model,
@@ -1221,30 +1329,45 @@ func (a *App) startPlanCmd() tea.Cmd {
 		cfg.ProjectDir, _ = os.Getwd()
 	}
 
+	p := a.program
 	return func() tea.Msg {
-		// Use RustEngine directly for planning
-		engine, err := growth.NewRustEngine(cfg, func(update growth.PhaseUpdate) {
-			if a.program != nil {
-				a.program.Send(AnalysisPhaseMsg{Update: update})
+		engine := growth.NewEngine(cfg, func(update growth.PhaseUpdate) {
+			if p != nil {
+				p.Send(AnalysisPhaseMsg{Update: update})
 			}
 		})
-		if err != nil {
-			return AnalysisDoneMsg{Error: err}
-		}
 
-		manifestPath := filepath.Join(cfg.OutputDir, "growth-manifest.json")
-		result := engine.GeneratePlan(manifestPath, false)
+		var result *growth.AnalysisResult
+		switch command {
+		case "plan":
+			if p != nil {
+				p.Send(NextStepOutputMsg{Line: "Generating growth plan via skene-engine..."})
+			}
+			result = engine.GeneratePlan()
+		case "build":
+			if p != nil {
+				p.Send(NextStepOutputMsg{Line: "Building implementation prompt via skene-engine..."})
+			}
+			result = engine.GenerateBuild()
+		case "status":
+			if p != nil {
+				p.Send(NextStepOutputMsg{Line: "Checking loop status via skene-engine..."})
+			}
+			result = engine.CheckStatus()
+		default:
+			return NextStepDoneMsg{Error: fmt.Errorf("unknown command: %s", command)}
+		}
 
 		if result.Error != nil {
-			return AnalysisDoneMsg{Error: result.Error, Result: result}
+			return NextStepDoneMsg{Error: result.Error}
 		}
-		return AnalysisDoneMsg{Error: nil, Result: result}
+		return NextStepDoneMsg{Error: nil}
 	}
 }
 
-func (a *App) runNextStepCommand(cmdStr string) tea.Cmd {
-	// Switch to analyzing view to show the command output
-	a.analyzingView = views.NewAnalyzingView()
+func (a *App) runNextStepCommand(title string, cmdStr string) tea.Cmd {
+	// Switch to a command view to show terminal output
+	a.analyzingView = views.NewCommandView(title)
 	a.analyzingView.SetSize(a.width, a.height)
 	a.analysisStartTime = time.Now()
 	a.state = StateAnalyzing
@@ -1566,6 +1689,17 @@ func (a *App) View() string {
 		}
 	}
 
+	// Safety: if a state rendered nothing (nil view), show a fallback
+	if content == "" {
+		content = lipgloss.Place(
+			a.width,
+			a.height,
+			lipgloss.Center,
+			lipgloss.Center,
+			styles.Muted.Render("Loading..."),
+		)
+	}
+
 	// Overlay help if visible
 	if a.showHelp {
 		helpItems := a.getCurrentHelpItems()
@@ -1645,6 +1779,14 @@ func (a *App) getCurrentHelpItems() []components.HelpItem {
 // ═══════════════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════
+
+func loadFileContent(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
 
 func tick() tea.Cmd {
 	return tea.Tick(time.Millisecond*50, func(t time.Time) tea.Msg {

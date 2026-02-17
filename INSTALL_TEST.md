@@ -1,136 +1,88 @@
 # Installation Testing Guide
 
-This guide is for team members testing the new installation script.
+Testing checklist for the Skene CLI install script.
 
-## 🧪 Testing Instructions
+## Test Scenarios
 
-### Test Scenario 1: Remote Installation (Recommended)
-
-Test the one-liner installation from GitHub:
+### 1. One-liner Install (Remote)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/Rust-impelementation/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene-cli/main/install.sh | bash
 ```
 
-**What to check:**
-- ✅ Script downloads successfully
-- ✅ Platform is detected correctly (macOS ARM64/Intel, Linux, Windows)
-- ✅ Script runs without errors
-- ✅ Installation completes successfully
-- ✅ `skene` command works after installation
+**Check:**
+- Script downloads and runs without errors
+- Platform detected correctly (macOS ARM64/Intel, Linux, Windows)
+- Binary installed to `/usr/local/bin/skene`
+- `skene` command works
 
-**Note:** If GitHub releases don't exist yet, the script will:
-- Try to build from source (if you have Go installed and are in the repo)
-- Or show a helpful error message with next steps
+If no GitHub release exists yet the script will try to build from source (requires Go) or print a helpful error.
 
-### Test Scenario 2: Clone and Install
-
-If you prefer to clone the repository first:
+### 2. Clone and Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/Px8-fi/skene-cli
+git clone https://github.com/SkeneTechnologies/skene-cli
 cd skene-cli
-
-# Run the install script
 ./install.sh
 ```
 
-**What to check:**
-- ✅ Script detects you're in the repo directory
-- ✅ Uses existing `build/skene` if available
-- ✅ Or builds from source if needed
-- ✅ Installation completes successfully
+**Check:**
+- Detects you are inside the repository
+- Uses existing `build/skene` if available, otherwise builds from source
+- Installation succeeds
 
-### Test Scenario 2: Manual Script Download
-
-```bash
-# Download the script
-curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh -o install.sh
-
-# Review the script (optional)
-cat install.sh
-
-# Run it
-chmod +x install.sh
-./install.sh
-```
-
-### Test Scenario 3: Custom Install Location
+### 3. Custom Install Location
 
 ```bash
-# Install to home directory (no sudo needed)
 INSTALL_DIR=~/bin ./install.sh
-
-# Verify it's in ~/bin
 ~/bin/skene --version
 ```
 
-### Test Scenario 4: Local Development Build
-
-If you've cloned the repository:
+### 4. Local Development Build
 
 ```bash
 cd skene-cli
-
-# Build locally first
 make build
-
-# Use the install script (should detect local build)
-./install.sh
-
-# Or force local build
+./install.sh          # uses local build automatically
+# or force local build:
 USE_LOCAL=true ./install.sh
 ```
 
-## 🐛 Reporting Issues
+### 5. Specific Version
 
-If you encounter any issues, please report:
+```bash
+VERSION=v0.2.0 ./install.sh
+```
 
-1. **Your platform:**
-   ```bash
-   uname -s  # OS
-   uname -m  # Architecture
-   ```
+## Post-Install Verification
 
-2. **Error messages:** Copy the full error output
+```bash
+# Any of these should confirm the binary is working:
+skene --version
+skene --help
+which skene
+```
 
-3. **What you tried:** Which installation method did you use?
+## Reporting Issues
 
-4. **Expected vs Actual:** What should have happened vs what actually happened
+Include the following when filing a bug:
 
-## ✅ Success Criteria
+```bash
+uname -s   # OS
+uname -m   # Architecture
+```
 
-The installation is successful if:
+Plus the full error output, which install method you used, and what you expected vs what happened.
+
+## Success Criteria
 
 - [ ] Script runs without errors
-- [ ] Binary is installed to `/usr/local/bin/skene` (or custom location)
-- [ ] `skene --version` or `skene --help` works
-- [ ] Binary is executable
-- [ ] No permission errors
+- [ ] Binary installed and executable
+- [ ] `skene` command is available in PATH
+- [ ] No permission errors (or clean sudo prompt)
 
-## 📝 Notes
+## Notes
 
-- The script requires `curl` or `wget` to download binaries
-- Installing to `/usr/local/bin` requires `sudo` (you'll be prompted)
-- If you don't have `sudo` access, use `INSTALL_DIR=~/bin` instead
-- The script automatically detects your platform and downloads the correct binary
-
-## 🚀 Quick Test
-
-Run this to test everything:
-
-```bash
-# Test one-liner installation
-curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/Rust-impelementation/install.sh | bash
-
-# Verify it works
-skene --version || skene --help || echo "skene command found at: $(which skene)"
-```
-
-**Alternative:** Clone and install:
-```bash
-git clone https://github.com/Px8-fi/skene-cli
-cd skene-cli
-./install.sh
-```
+- Requires `curl` or `wget`
+- `/usr/local/bin` needs `sudo`; use `INSTALL_DIR=~/bin` to avoid it
+- The script auto-detects your OS and architecture

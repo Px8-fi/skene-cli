@@ -10,6 +10,16 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// ExistingAnalysisChoice tracks the user's choice when existing analysis is found
+type ExistingAnalysisChoice int
+
+const (
+	ChoiceNotAsked ExistingAnalysisChoice = iota
+	ChoiceAsking
+	ChoiceViewAnalysis
+	ChoiceRerunAnalysis
+)
+
 // ProjectDirView handles project directory selection
 type ProjectDirView struct {
 	width       int
@@ -25,7 +35,12 @@ type ProjectDirView struct {
 	browsing         bool
 	dirBrowser       *components.DirBrowser
 	browseButtons    *components.ButtonGroup
-	browseFocusList  bool // true = focus on dir listing, false = focus on buttons
+	browseFocusList  bool
+
+	// Existing analysis detection
+	existingAnalysis      ExistingAnalysisChoice
+	existingButtonGroup   *components.ButtonGroup
+	hasSkeneContext        bool
 }
 
 // NewProjectDirView creates a new project directory view
@@ -40,17 +55,20 @@ func NewProjectDirView() *ProjectDirView {
 	ti.Focus()
 
 	bg := components.NewButtonGroup("Use Current", "Browse", "Continue")
-	// Input has focus initially, so no button should be highlighted
 	bg.SetActiveIndex(-1)
 
-	return &ProjectDirView{
-		textInput:   ti,
-		buttonGroup: bg,
-		inputFocus:  true,
-		currentDir:  cwd,
-		isValid:     true,
-		header:      components.NewWizardHeader(5, "Project Directory"),
+	v := &ProjectDirView{
+		textInput:        ti,
+		buttonGroup:      bg,
+		inputFocus:       true,
+		currentDir:       cwd,
+		isValid:          true,
+		header:           components.NewWizardHeader(5, "Project Directory"),
+		existingAnalysis: ChoiceNotAsked,
 	}
+
+	v.validatePath()
+	return v
 }
 
 // SetSize updates dimensions
@@ -73,17 +91,19 @@ func (v *ProjectDirView) HandleTab() {
 	v.inputFocus = !v.inputFocus
 	if v.inputFocus {
 		v.textInput.Focus()
-		// Deactivate buttons so none appear highlighted while typing
 		v.buttonGroup.SetActiveIndex(-1)
 	} else {
 		v.textInput.Blur()
-		// Activate the first button when moving focus to buttons
 		v.buttonGroup.SetActiveIndex(0)
 	}
 }
 
 // HandleLeft handles left key in buttons
 func (v *ProjectDirView) HandleLeft() {
+	if v.existingAnalysis == ChoiceAsking && v.existingButtonGroup != nil {
+		v.existingButtonGroup.Previous()
+		return
+	}
 	if !v.inputFocus {
 		v.buttonGroup.Previous()
 	}
@@ -91,6 +111,10 @@ func (v *ProjectDirView) HandleLeft() {
 
 // HandleRight handles right key in buttons
 func (v *ProjectDirView) HandleRight() {
+	if v.existingAnalysis == ChoiceAsking && v.existingButtonGroup != nil {
+		v.existingButtonGroup.Next()
+		return
+	}
 	if !v.inputFocus {
 		v.buttonGroup.Next()
 	}
@@ -98,7 +122,7 @@ func (v *ProjectDirView) HandleRight() {
 
 // IsInputFocused returns if the input is focused
 func (v *ProjectDirView) IsInputFocused() bool {
-	return v.inputFocus
+	return v.inputFocus && v.existingAnalysis != ChoiceAsking
 }
 
 // GetButtonLabel returns the selected button label
@@ -118,7 +142,6 @@ func (v *ProjectDirView) UseCurrentDir() {
 func (v *ProjectDirView) StartBrowsing() {
 	startPath := v.GetProjectDir()
 	v.dirBrowser = components.NewDirBrowser(startPath)
-	// Give the browser a reasonable height based on available space
 	browserHeight := v.height - 16
 	if browserHeight < 6 {
 		browserHeight = 6
@@ -128,7 +151,6 @@ func (v *ProjectDirView) StartBrowsing() {
 	}
 	v.dirBrowser.SetHeight(browserHeight)
 	v.browseButtons = components.NewButtonGroup("Select This Directory", "Cancel")
-	// Deactivate buttons initially -- focus starts on the listing
 	v.browseButtons.SetActiveIndex(-1)
 	v.browseFocusList = true
 	v.browsing = true
@@ -140,7 +162,7 @@ func (v *ProjectDirView) StopBrowsing() {
 	v.browsing = false
 	v.dirBrowser = nil
 	v.browseButtons = nil
-	v.inputFocus = false // return focus to buttons
+	v.inputFocus = false
 }
 
 // IsBrowsing returns true if the directory browser is active
@@ -158,7 +180,6 @@ func (v *ProjectDirView) BrowseConfirm() {
 	if v.dirBrowser == nil {
 		return
 	}
-	// Always use the directory we're currently inside
 	selectedPath := v.dirBrowser.CurrentPath()
 	v.textInput.SetValue(selectedPath)
 	v.currentDir = selectedPath
@@ -181,10 +202,8 @@ func (v *ProjectDirView) GetBrowseButtonLabel() string {
 func (v *ProjectDirView) HandleBrowseTab() {
 	v.browseFocusList = !v.browseFocusList
 	if v.browseFocusList {
-		// Deactivate buttons when moving focus to listing
 		v.browseButtons.SetActiveIndex(-1)
 	} else {
-		// Activate first button when moving focus to buttons
 		v.browseButtons.SetActiveIndex(0)
 	}
 }
@@ -214,7 +233,6 @@ func (v *ProjectDirView) HandleBrowseKey(key string) {
 	case "down", "j":
 		v.dirBrowser.CursorDown()
 	case "enter":
-		// If it's a directory, navigate into it
 		if v.dirBrowser.SelectedIsDir() {
 			v.dirBrowser.Enter()
 		}
@@ -231,7 +249,6 @@ func (v *ProjectDirView) GetProjectDir() string {
 	if val == "" {
 		return v.currentDir
 	}
-	// Expand ~ to home dir
 	if len(val) > 0 && val[0] == '~' {
 		home, _ := os.UserHomeDir()
 		val = filepath.Join(home, val[1:])
@@ -249,6 +266,61 @@ func (v *ProjectDirView) HasWarning() bool {
 	return v.warningMsg != ""
 }
 
+// CheckForExistingAnalysis checks if skene-context exists in the selected directory
+// and transitions to the choice prompt if found
+func (v *ProjectDirView) CheckForExistingAnalysis() bool {
+	path := v.GetProjectDir()
+	contextDir := filepath.Join(path, "skene-context")
+
+	info, err := os.Stat(contextDir)
+	if err == nil && info.IsDir() {
+		v.hasSkeneContext = true
+		v.existingAnalysis = ChoiceAsking
+		v.existingButtonGroup = components.NewButtonGroup("View Analysis", "Rerun Analysis")
+		v.textInput.Blur()
+		v.inputFocus = false
+		return true
+	}
+
+	v.hasSkeneContext = false
+	return false
+}
+
+// IsAskingExistingChoice returns true if prompting for existing analysis choice
+func (v *ProjectDirView) IsAskingExistingChoice() bool {
+	return v.existingAnalysis == ChoiceAsking
+}
+
+// GetExistingChoiceLabel returns the selected button label for existing analysis
+func (v *ProjectDirView) GetExistingChoiceLabel() string {
+	if v.existingButtonGroup == nil {
+		return ""
+	}
+	return v.existingButtonGroup.GetActiveLabel()
+}
+
+// SetExistingChoice records the user's choice
+func (v *ProjectDirView) SetExistingChoice(view bool) {
+	if view {
+		v.existingAnalysis = ChoiceViewAnalysis
+	} else {
+		v.existingAnalysis = ChoiceRerunAnalysis
+	}
+}
+
+// DismissExistingChoice resets the existing analysis prompt
+func (v *ProjectDirView) DismissExistingChoice() {
+	v.existingAnalysis = ChoiceNotAsked
+	v.existingButtonGroup = nil
+	v.inputFocus = false
+	v.buttonGroup.SetActiveIndex(0)
+}
+
+// HasExistingAnalysis returns true if skene-context was detected
+func (v *ProjectDirView) HasExistingAnalysis() bool {
+	return v.hasSkeneContext
+}
+
 func (v *ProjectDirView) validatePath() {
 	path := v.GetProjectDir()
 
@@ -257,6 +329,7 @@ func (v *ProjectDirView) validatePath() {
 		v.isValid = false
 		v.validMsg = "Directory not found"
 		v.warningMsg = ""
+		v.hasSkeneContext = false
 		return
 	}
 
@@ -264,11 +337,20 @@ func (v *ProjectDirView) validatePath() {
 		v.isValid = false
 		v.validMsg = "Path is not a directory"
 		v.warningMsg = ""
+		v.hasSkeneContext = false
 		return
 	}
 
 	v.isValid = true
 	v.validMsg = ""
+
+	// Check for existing skene-context
+	contextDir := filepath.Join(path, "skene-context")
+	if info, err := os.Stat(contextDir); err == nil && info.IsDir() {
+		v.hasSkeneContext = true
+	} else {
+		v.hasSkeneContext = false
+	}
 
 	// Check for common project indicators
 	hasProject := false
@@ -305,10 +387,8 @@ func (v *ProjectDirView) Render() string {
 	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
 	if v.browsing && v.dirBrowser != nil {
-		// Render the directory browser
 		browserSection := v.dirBrowser.Render(sectionWidth)
 
-		// Buttons (uses the real browseButtons group which tracks focus)
 		browseBtns := lipgloss.NewStyle().
 			Width(sectionWidth).
 			Align(lipgloss.Center).
@@ -334,6 +414,11 @@ func (v *ProjectDirView) Render() string {
 		)
 
 		return centered
+	}
+
+	// Existing analysis choice view
+	if v.existingAnalysis == ChoiceAsking {
+		return v.renderExistingAnalysisChoice(wizHeader, sectionWidth)
 	}
 
 	// Directory selection section
@@ -374,6 +459,61 @@ func (v *ProjectDirView) Render() string {
 	return centered + "\n" + footer
 }
 
+func (v *ProjectDirView) renderExistingAnalysisChoice(wizHeader string, width int) string {
+	header := styles.SectionHeader.Render("Existing Analysis Detected")
+	msg := styles.Body.Render("A previous Skene Growth analysis was found in this project.")
+	path := styles.Muted.Render("Found: " + filepath.Join(v.GetProjectDir(), "skene-context") + "/")
+	question := styles.Accent.Render("What would you like to do?")
+
+	buttons := lipgloss.NewStyle().
+		Width(width).
+		Align(lipgloss.Center).
+		Render(v.existingButtonGroup.Render())
+
+	innerContent := lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		"",
+		msg,
+		path,
+		"",
+		question,
+	)
+
+	box := styles.Box.Width(width).Render(innerContent)
+
+	footer := lipgloss.NewStyle().
+		Width(v.width).
+		Align(lipgloss.Center).
+		Render(components.FooterHelp([]components.HelpItem{
+			{Key: "←/→", Desc: "select"},
+			{Key: "enter", Desc: "confirm"},
+			{Key: "esc", Desc: "back"},
+			{Key: "ctrl+c", Desc: "quit"},
+		}))
+
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		wizHeader,
+		"",
+		box,
+		"",
+		buttons,
+	)
+
+	padded := lipgloss.NewStyle().PaddingTop(2).Render(content)
+
+	centered := lipgloss.Place(
+		v.width,
+		v.height-3,
+		lipgloss.Center,
+		lipgloss.Top,
+		padded,
+	)
+
+	return centered + "\n" + footer
+}
+
 func (v *ProjectDirView) renderDirSection(width int) string {
 	header := styles.SectionHeader.Render("Select project to analyze")
 	subtitle := styles.Muted.Render("Enter the path to your project's root directory")
@@ -385,11 +525,13 @@ func (v *ProjectDirView) renderDirSection(width int) string {
 	// Validation status
 	var validationLine string
 	if !v.isValid && v.validMsg != "" {
-		validationLine = styles.Error.Render("✗ " + v.validMsg)
+		validationLine = styles.Error.Render("X " + v.validMsg)
 	} else if v.warningMsg != "" {
 		validationLine = lipgloss.NewStyle().Foreground(styles.Warning).Render("! " + v.warningMsg)
+	} else if v.isValid && v.hasSkeneContext {
+		validationLine = styles.SuccessText.Render("Valid project directory (existing analysis found)")
 	} else if v.isValid {
-		validationLine = styles.SuccessText.Render("✓ Valid project directory")
+		validationLine = styles.SuccessText.Render("Valid project directory")
 	}
 
 	content := lipgloss.JoinVertical(
@@ -408,6 +550,14 @@ func (v *ProjectDirView) renderDirSection(width int) string {
 
 // GetHelpItems returns context-specific help
 func (v *ProjectDirView) GetHelpItems() []components.HelpItem {
+	if v.existingAnalysis == ChoiceAsking {
+		return []components.HelpItem{
+			{Key: "←/→", Desc: "select option"},
+			{Key: "enter", Desc: "confirm"},
+			{Key: "esc", Desc: "go back"},
+			{Key: "ctrl+c", Desc: "quit"},
+		}
+	}
 	return []components.HelpItem{
 		{Key: "enter", Desc: "confirm"},
 		{Key: "tab", Desc: "switch focus"},

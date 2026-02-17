@@ -7,26 +7,27 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// SkenePackage represents a Skene ecosystem package
+type SkenePackage struct {
+	ID          string
+	Name        string
+	Description string
+	URL         string
+	Enabled     bool
+}
+
 // AnalysisConfigView allows configuration before analysis
 type AnalysisConfigView struct {
 	width        int
 	height       int
 	useDefaults  bool
 	selectedIdx  int
-	options      []AnalysisOption
+	packages     []SkenePackage
 	header       *components.WizardHeader
 	buttonGroup  *components.ButtonGroup
 	providerName string
 	modelName    string
 	projectDir   string
-}
-
-// AnalysisOption represents a configurable option
-type AnalysisOption struct {
-	Name        string
-	Description string
-	Enabled     bool
-	Value       string
 }
 
 // NewAnalysisConfigView creates a new analysis configuration view
@@ -39,10 +40,28 @@ func NewAnalysisConfigView(provider, model, projectDir string) *AnalysisConfigVi
 		projectDir:   projectDir,
 		header:       components.NewWizardHeader(6, "Analysis Configuration"),
 		buttonGroup:  components.YesNoButtons(true),
-		options: []AnalysisOption{
-			{Name: "Product docs", Description: "Generate product documentation", Enabled: false},
-			{Name: "Business type", Description: "Specify business type for template", Enabled: false, Value: "auto-detect"},
-			{Name: "Verbose output", Description: "Show detailed analysis progress", Enabled: true},
+		packages: []SkenePackage{
+			{
+				ID:          "growth",
+				Name:        "Skene Growth",
+				Description: "Tech stack detection, growth feature discovery, and growth plan generation",
+				URL:         "github.com/SkeneTechnologies/skene-growth",
+				Enabled:     true,
+			},
+			{
+				ID:          "skills",
+				Name:        "Skene Skills",
+				Description: "PLG analysis skills for Claude Code (analyze, generate manifests, templates)",
+				URL:         "github.com/SkeneTechnologies/skene-skills",
+				Enabled:     true,
+			},
+			{
+				ID:          "cookbook",
+				Name:        "Skene Cookbook",
+				Description: "700+ AI skills for PLG, marketing, security, DevEx, and more",
+				URL:         "github.com/SkeneTechnologies/skene-cookbook",
+				Enabled:     true,
+			},
 		},
 	}
 }
@@ -56,15 +75,19 @@ func (v *AnalysisConfigView) SetSize(width, height int) {
 
 // HandleUp moves selection up
 func (v *AnalysisConfigView) HandleUp() {
-	if !v.useDefaults && v.selectedIdx > 0 {
-		v.selectedIdx--
+	if !v.useDefaults {
+		if v.selectedIdx > 0 {
+			v.selectedIdx--
+		}
 	}
 }
 
 // HandleDown moves selection down
 func (v *AnalysisConfigView) HandleDown() {
-	if !v.useDefaults && v.selectedIdx < len(v.options)-1 {
-		v.selectedIdx++
+	if !v.useDefaults {
+		if v.selectedIdx < len(v.packages)-1 {
+			v.selectedIdx++
+		}
 	}
 }
 
@@ -84,8 +107,10 @@ func (v *AnalysisConfigView) HandleRight() {
 
 // HandleSpace toggles option
 func (v *AnalysisConfigView) HandleSpace() {
-	if !v.useDefaults && v.selectedIdx >= 0 && v.selectedIdx < len(v.options) {
-		v.options[v.selectedIdx].Enabled = !v.options[v.selectedIdx].Enabled
+	if !v.useDefaults {
+		if v.selectedIdx >= 0 && v.selectedIdx < len(v.packages) {
+			v.packages[v.selectedIdx].Enabled = !v.packages[v.selectedIdx].Enabled
+		}
 	}
 }
 
@@ -97,6 +122,7 @@ func (v *AnalysisConfigView) GetButtonLabel() string {
 // SetCustomMode enables custom configuration mode
 func (v *AnalysisConfigView) SetCustomMode() {
 	v.useDefaults = false
+	v.selectedIdx = 0
 }
 
 // IsDefaultMode returns if using default settings
@@ -104,14 +130,19 @@ func (v *AnalysisConfigView) IsDefaultMode() bool {
 	return v.useDefaults
 }
 
-// GetProductDocs returns if product docs should be generated
-func (v *AnalysisConfigView) GetProductDocs() bool {
-	return v.options[0].Enabled
+// GetUseGrowth returns if Skene Growth is enabled
+func (v *AnalysisConfigView) GetUseGrowth() bool {
+	return v.packages[0].Enabled
 }
 
-// GetVerbose returns if verbose output is enabled
-func (v *AnalysisConfigView) GetVerbose() bool {
-	return v.options[2].Enabled
+// GetUseSkills returns if Skene Skills is enabled
+func (v *AnalysisConfigView) GetUseSkills() bool {
+	return v.packages[1].Enabled
+}
+
+// GetUseCookbook returns if Skene Cookbook is enabled
+func (v *AnalysisConfigView) GetUseCookbook() bool {
+	return v.packages[2].Enabled
 }
 
 // Render the analysis config view
@@ -188,11 +219,13 @@ func (v *AnalysisConfigView) renderSummary(width int) string {
 
 func (v *AnalysisConfigView) renderDefaultQuestion(width int) string {
 	question := styles.Body.Render("Use recommended settings?")
+	desc := styles.Muted.Render("Default runs all Skene packages (Growth, Skills, Cookbook)")
 	buttons := v.buttonGroup.Render()
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
 		question,
+		desc,
 		"",
 		buttons,
 	)
@@ -204,41 +237,50 @@ func (v *AnalysisConfigView) renderDefaultQuestion(width int) string {
 }
 
 func (v *AnalysisConfigView) renderCustomOptions(width int) string {
-	header := styles.SectionHeader.Render("Advanced Configuration")
+	header := styles.Body.Render("Select packages to include in the analysis:")
 
-	var items []string
-	for i, opt := range v.options {
+	var pkgItems []string
+	for i, pkg := range v.packages {
 		isSelected := i == v.selectedIdx
 
-		// Checkbox
 		var checkbox string
-		if opt.Enabled {
-			checkbox = styles.SuccessText.Render("[✓]")
+		if pkg.Enabled {
+			checkbox = styles.SuccessText.Render("✓")
 		} else {
-			checkbox = styles.Muted.Render("[ ]")
+			checkbox = styles.Muted.Render("✗")
 		}
 
 		var nameStyle, descStyle lipgloss.Style
 		if isSelected {
-			nameStyle = lipgloss.NewStyle().Foreground(styles.Amber)
-			descStyle = lipgloss.NewStyle().Foreground(styles.Sand)
+			nameStyle = styles.ListItemSelected
+			descStyle = styles.ListDescriptionSelected
 		} else {
-			nameStyle = styles.Body
-			descStyle = styles.Muted
+			nameStyle = styles.ListItem
+			descStyle = styles.ListDescription
 		}
 
-		line := checkbox + " " + nameStyle.Render(opt.Name) + "  " + descStyle.Render(opt.Description)
-		items = append(items, line)
+		line := checkbox + "  " + pkg.Name
+		nameLine := nameStyle.Render(line)
+		descLine := descStyle.Render(pkg.Description)
+		
+		item := lipgloss.JoinVertical(lipgloss.Left, nameLine, descLine)
+		if i < len(v.packages)-1 {
+			item += "\n"
+		}
+		pkgItems = append(pkgItems, item)
 	}
 
-	list := lipgloss.JoinVertical(lipgloss.Left, items...)
-	hint := styles.Muted.Render("Space to toggle • Enter to start analysis")
-
+	pkgList := lipgloss.JoinVertical(lipgloss.Left, pkgItems...)
+	
+	// Start hint
+	hint := styles.Muted.Render("space toggle  •  enter start analysis")
+	
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
+		"",
 		header,
 		"",
-		list,
+		pkgList,
 		"",
 		hint,
 	)

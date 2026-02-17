@@ -157,7 +157,7 @@ func (v *ResultsView) Render() string {
 	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
 	// Success banner
-	banner := styles.SuccessText.Render("✓ Analysis Complete!")
+	banner := styles.SuccessText.Render("Skene Growth Analysis Complete")
 
 	// Tabs
 	tabsView := v.renderTabs()

@@ -150,15 +150,16 @@ func (e *RustEngine) GeneratePlan(manifestPath string, onboarding bool) *Analysi
 	result := &AnalysisResult{}
 	
 	input := EngineInput{
-		Command:      "plan",
-		Provider:     e.config.Provider,
-		Model:        e.config.Model,
-		APIKey:       e.config.APIKey,
-		ProjectDir:   e.config.ProjectDir,
-		OutputDir:    e.config.OutputDir,
-		ManifestPath: &manifestPath,
-		Onboarding:   &onboarding,
-		Debug:        e.config.Verbose,
+		Command:        "plan",
+		Provider:       e.config.Provider,
+		Model:          e.config.Model,
+		APIKey:         e.config.APIKey,
+		ProjectDir:     e.config.ProjectDir,
+		OutputDir:      e.config.OutputDir,
+		ExcludeFolders: []string{},
+		ManifestPath:   &manifestPath,
+		Onboarding:     &onboarding,
+		Debug:          e.config.Verbose,
 	}
 	
 	if e.config.BaseURL != "" {
@@ -179,14 +180,15 @@ func (e *RustEngine) GenerateBuild() *AnalysisResult {
 	manifestPath := filepath.Join(e.config.OutputDir, "growth-manifest.json")
 
 	input := EngineInput{
-		Command:      "build",
-		Provider:     e.config.Provider,
-		Model:        e.config.Model,
-		APIKey:       e.config.APIKey,
-		ProjectDir:   e.config.ProjectDir,
-		OutputDir:    e.config.OutputDir,
-		ManifestPath: &manifestPath,
-		Debug:        e.config.Verbose,
+		Command:        "build",
+		Provider:       e.config.Provider,
+		Model:          e.config.Model,
+		APIKey:         e.config.APIKey,
+		ProjectDir:     e.config.ProjectDir,
+		OutputDir:      e.config.OutputDir,
+		ExcludeFolders: []string{},
+		ManifestPath:   &manifestPath,
+		Debug:          e.config.Verbose,
 	}
 
 	if e.config.BaseURL != "" {
@@ -207,14 +209,15 @@ func (e *RustEngine) CheckStatus() *AnalysisResult {
 	manifestPath := filepath.Join(e.config.OutputDir, "growth-manifest.json")
 
 	input := EngineInput{
-		Command:      "status",
-		Provider:     e.config.Provider,
-		Model:        e.config.Model,
-		APIKey:       e.config.APIKey,
-		ProjectDir:   e.config.ProjectDir,
-		OutputDir:    e.config.OutputDir,
-		ManifestPath: &manifestPath,
-		Debug:        e.config.Verbose,
+		Command:        "status",
+		Provider:       e.config.Provider,
+		Model:          e.config.Model,
+		APIKey:         e.config.APIKey,
+		ProjectDir:     e.config.ProjectDir,
+		OutputDir:      e.config.OutputDir,
+		ExcludeFolders: []string{},
+		ManifestPath:   &manifestPath,
+		Debug:          e.config.Verbose,
 	}
 
 	if e.config.BaseURL != "" {

@@ -260,9 +260,9 @@ func GetProviders() []Provider {
 			Description: "Claude models with strong reasoning",
 			RequiresKey: true,
 			Models: []Model{
-				{ID: "claude-sonnet-4-5", Name: "claude-sonnet-4-5", Description: "Best balance of speed and capability"},
-				{ID: "claude-3-opus", Name: "claude-3-opus", Description: "Most capable Claude"},
-				{ID: "claude-3-haiku", Name: "claude-3-haiku", Description: "Fast and efficient"},
+				{ID: "claude-opus-4-6", Name: "claude-opus-4-6", Description: "Most capable model for complex tasks"},
+				{ID: "claude-sonnet-4-5", Name: "claude-sonnet-4-5", Description: "Best combination of speed and intelligence"},
+				{ID: "claude-haiku-4-5", Name: "claude-haiku-4-5", Description: "Fastest model with near-frontier intelligence"},
 			},
 		},
 		{

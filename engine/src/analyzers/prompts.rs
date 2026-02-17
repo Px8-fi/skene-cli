@@ -230,14 +230,53 @@ For growth opportunities, consider what's missing:
 - Engagement features
 - Community features
 
-Return a complete growth manifest as JSON with:
-- project_name: Inferred from the codebase
-- description: Brief project description
-- tech_stack: From the tech stack analysis
-- current_growth_features: From the growth features analysis
-- revenue_leakage: From the revenue leakage analysis
-- industry: From the industry classification analysis (include primary, secondary, confidence, evidence)
-- growth_opportunities: Your identified opportunities with priority (high/medium/low)
+IMPORTANT: Return a valid JSON object matching this EXACT schema.
+All list fields MUST be JSON arrays ([...]), NOT objects/maps ({...}).
+
+{
+  "project_name": "string",
+  "description": "string",
+  "tech_stack": {
+    "framework": "string or null",
+    "language": "string",
+    "database": "string or null",
+    "auth": "string or null",
+    "deployment": "string or null",
+    "package_manager": "string or null",
+    "services": ["array of strings"]
+  },
+  "current_growth_features": [
+    {
+      "feature_name": "string",
+      "file_path": "string",
+      "detected_intent": "string",
+      "confidence_score": 0.0,
+      "entry_point": "string or null",
+      "growth_potential": ["array of strings"]
+    }
+  ],
+  "growth_opportunities": [
+    {
+      "feature_name": "string",
+      "description": "string",
+      "priority": "high|medium|low"
+    }
+  ],
+  "revenue_leakage": [
+    {
+      "issue": "string",
+      "file_path": "string or null",
+      "impact": "high|medium|low",
+      "recommendation": "string"
+    }
+  ],
+  "industry": {
+    "primary": "string or null",
+    "secondary": ["array of strings"],
+    "confidence": 0.0,
+    "evidence": ["array of strings"]
+  }
+}
 "#;
 
 pub const DOCS_MANIFEST_PROMPT: &str = r#"
@@ -264,14 +303,58 @@ For growth opportunities, consider what's missing:
 - Monetization capabilities
 - Engagement features
 
-Return a complete manifest as JSON with:
-- version: "2.0"
-- project_name: Inferred from the codebase
-- description: Brief project description
-- tech_stack: From the tech stack analysis
-- product_overview: From the product overview analysis
-- industry: From the industry classification analysis (include primary, secondary, confidence, evidence)
-- features: From the features documentation
-- current_growth_features: From the growth features analysis
-- growth_opportunities: Your identified opportunities with priority (high/medium/low)
+IMPORTANT: Return a valid JSON object matching this EXACT schema.
+All list fields MUST be JSON arrays ([...]), NOT objects/maps ({...}).
+
+{
+  "version": "2.0",
+  "project_name": "string",
+  "description": "string",
+  "tech_stack": {
+    "framework": "string or null",
+    "language": "string",
+    "database": "string or null",
+    "auth": "string or null",
+    "deployment": "string or null",
+    "package_manager": "string or null",
+    "services": ["array of strings"]
+  },
+  "product_overview": {
+    "tagline": "string or null",
+    "value_proposition": "string or null",
+    "target_audience": "string or null"
+  },
+  "industry": {
+    "primary": "string or null",
+    "secondary": ["array of strings"],
+    "confidence": 0.0,
+    "evidence": ["array of strings"]
+  },
+  "features": [
+    {
+      "name": "string",
+      "description": "string",
+      "file_path": "string or null",
+      "usage_example": "string or null",
+      "category": "string or null"
+    }
+  ],
+  "current_growth_features": [
+    {
+      "feature_name": "string",
+      "file_path": "string",
+      "detected_intent": "string",
+      "confidence_score": 0.0,
+      "entry_point": "string or null",
+      "growth_potential": ["array of strings"]
+    }
+  ],
+  "growth_opportunities": [
+    {
+      "feature_name": "string",
+      "description": "string",
+      "priority": "high|medium|low"
+    }
+  ]
+}
 "#;

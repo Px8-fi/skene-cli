@@ -1,4 +1,14 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Deserialize a Vec that may be null in JSON as an empty Vec
+fn null_as_empty_vec<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    let opt: Option<Vec<T>> = Option::deserialize(deserializer)?;
+    Ok(opt.unwrap_or_default())
+}
 
 #[derive(Debug, Deserialize)]
 pub struct EngineInput {
@@ -11,7 +21,7 @@ pub struct EngineInput {
     pub output_dir: String,
     #[serde(default)]
     pub product_docs: bool,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_empty_vec")]
     pub exclude_folders: Vec<String>,
     #[serde(default)]
     pub debug: bool,

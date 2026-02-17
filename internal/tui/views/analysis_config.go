@@ -259,10 +259,15 @@ func (v *AnalysisConfigView) renderCustomOptions(width int) string {
 			descStyle = styles.ListDescription
 		}
 
+		// Use the styles.ListItemSelected which has a left border
+		// We need to be careful not to double up on padding if the style already has it
+		// styles.ListItemSelected has PaddingLeft(1)
+		// styles.ListItem has PaddingLeft(2)
+
 		line := checkbox + "  " + pkg.Name
 		nameLine := nameStyle.Render(line)
 		descLine := descStyle.Render(pkg.Description)
-		
+
 		item := lipgloss.JoinVertical(lipgloss.Left, nameLine, descLine)
 		if i < len(v.packages)-1 {
 			item += "\n"
@@ -271,10 +276,10 @@ func (v *AnalysisConfigView) renderCustomOptions(width int) string {
 	}
 
 	pkgList := lipgloss.JoinVertical(lipgloss.Left, pkgItems...)
-	
+
 	// Start hint
 	hint := styles.Muted.Render("space toggle  •  enter start analysis")
-	
+
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		"",

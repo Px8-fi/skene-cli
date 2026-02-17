@@ -1280,19 +1280,7 @@ func (a *App) startAnalysis() tea.Cmd {
 }
 
 func (a *App) startRealAnalysisCmd(p *tea.Program) tea.Cmd {
-	cfg := growth.EngineConfig{
-		Provider:   a.configMgr.Config.Provider,
-		Model:      a.configMgr.Config.Model,
-		APIKey:     a.configMgr.Config.APIKey,
-		BaseURL:    a.configMgr.Config.BaseURL,
-		ProjectDir: a.configMgr.Config.ProjectDir,
-		OutputDir:  a.configMgr.Config.OutputDir,
-	}
-
-	// Default project dir to cwd
-	if cfg.ProjectDir == "" {
-		cfg.ProjectDir, _ = os.Getwd()
-	}
+	cfg := a.buildEngineConfig()
 
 	return func() tea.Msg {
 		ctx := context.Background()
@@ -1317,17 +1305,7 @@ func (a *App) runEngineCommand(title string, command string) tea.Cmd {
 	a.analysisStartTime = time.Now()
 	a.state = StateAnalyzing
 
-	cfg := growth.EngineConfig{
-		Provider:   a.configMgr.Config.Provider,
-		Model:      a.configMgr.Config.Model,
-		APIKey:     a.configMgr.Config.APIKey,
-		BaseURL:    a.configMgr.Config.BaseURL,
-		ProjectDir: a.configMgr.Config.ProjectDir,
-		OutputDir:  a.configMgr.Config.OutputDir,
-	}
-	if cfg.ProjectDir == "" {
-		cfg.ProjectDir, _ = os.Getwd()
-	}
+	cfg := a.buildEngineConfig()
 
 	p := a.program
 	return func() tea.Msg {
@@ -1779,6 +1757,34 @@ func (a *App) getCurrentHelpItems() []components.HelpItem {
 // ═══════════════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════════════
+
+// buildEngineConfig creates an EngineConfig with properly resolved paths.
+// OutputDir is resolved relative to ProjectDir so that output files are always
+// written inside the user's chosen project directory.
+func (a *App) buildEngineConfig() growth.EngineConfig {
+	projectDir := a.configMgr.Config.ProjectDir
+	if projectDir == "" {
+		projectDir, _ = os.Getwd()
+	}
+
+	outputDir := a.configMgr.Config.OutputDir
+	if outputDir == "" {
+		outputDir = "./skene-context"
+	}
+	// Resolve relative OutputDir against ProjectDir
+	if !filepath.IsAbs(outputDir) {
+		outputDir = filepath.Join(projectDir, outputDir)
+	}
+
+	return growth.EngineConfig{
+		Provider:   a.configMgr.Config.Provider,
+		Model:      a.configMgr.Config.Model,
+		APIKey:     a.configMgr.Config.APIKey,
+		BaseURL:    a.configMgr.Config.BaseURL,
+		ProjectDir: projectDir,
+		OutputDir:  outputDir,
+	}
+}
 
 func loadFileContent(path string) string {
 	data, err := os.ReadFile(path)

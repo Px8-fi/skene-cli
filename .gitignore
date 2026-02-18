@@ -1,2 +1,18 @@
-internal/.DS_Store
+# OS
 .DS_Store
+internal/.DS_Store
+
+# Binaries
+skene
+skene-cli
+build/
+
+# Output / generated
+skene-context/
+tmp/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -20,6 +20,7 @@ ifeq ($(HAS_GO),yes)
 build:
 	@echo "Building $(BINARY_NAME) from source..."
 	@mkdir -p $(BUILD_DIR)
+	go mod download
 	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/skene
 else
 build:

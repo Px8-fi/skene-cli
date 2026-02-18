@@ -1,8 +1,8 @@
 package views
 
 import (
-	"skene-terminal-v2/internal/tui/components"
-	"skene-terminal-v2/internal/tui/styles"
+	"skene/internal/tui/components"
+	"skene/internal/tui/styles"
 
 	"github.com/charmbracelet/lipgloss"
 )

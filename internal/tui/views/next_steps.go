@@ -1,8 +1,8 @@
 package views
 
 import (
-	"skene-terminal-v2/internal/tui/components"
-	"skene-terminal-v2/internal/tui/styles"
+	"skene/internal/tui/components"
+	"skene/internal/tui/styles"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -43,10 +43,10 @@ func NewNextStepsView() *NextStepsView {
 				Command:     "uvx skene-growth build",
 			},
 			{
-				ID:          "status",
-				Name:        "Check Loop Status",
-				Description: "Verify which growth loop requirements are implemented",
-				Command:     "uvx skene-growth status",
+				ID:          "validate",
+				Name:        "Validate Manifest",
+				Description: "Validate the growth manifest against the schema",
+				Command:     "uvx skene-growth validate",
 			},
 			{
 				ID:          "rerun",
@@ -69,7 +69,7 @@ func NewNextStepsView() *NextStepsView {
 			{
 				ID:          "exit",
 				Name:        "Exit",
-				Description: "Close Skene Growth",
+				Description: "Close Skene CLI",
 				Command:     "",
 			},
 		},

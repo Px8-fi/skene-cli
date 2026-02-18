@@ -1,10 +1,17 @@
 package syscheck
 
+import (
+	"os/exec"
+	"strings"
+
+	"skene/internal/services/uvresolver"
+)
+
 // CheckStatus represents the result of a single check
 type CheckStatus int
 
 const (
-	StatusPending  CheckStatus = iota
+	StatusPending CheckStatus = iota
 	StatusRunning
 	StatusPassed
 	StatusFailed
@@ -14,22 +21,20 @@ const (
 
 // CheckResult holds the result of a system check
 type CheckResult struct {
-	Name        string
-	Status      CheckStatus
-	Message     string
-	Detail      string
-	FixCommand  string
-	FixURL      string
-	Version     string
-	Required    bool
+	Name       string
+	Status     CheckStatus
+	Message    string
+	Detail     string
+	FixCommand string
+	FixURL     string
+	Version    string
+	Required   bool
 }
 
 // SystemCheckResult holds all system check results
 type SystemCheckResult struct {
-	Python    CheckResult
-	UV        CheckResult
-	Pip       CheckResult
-	AllPassed bool
+	UV         CheckResult
+	AllPassed  bool
 	CanProceed bool
 }
 
@@ -42,7 +47,7 @@ type Checker struct {
 func NewChecker() *Checker {
 	return &Checker{
 		results: &SystemCheckResult{
-			AllPassed: true,
+			AllPassed:  true,
 			CanProceed: true,
 		},
 	}
@@ -53,14 +58,46 @@ func (c *Checker) GetResults() *SystemCheckResult {
 	return c.results
 }
 
-// RunAllChecks executes all system checks
+// RunAllChecks verifies that a uvx binary is available (system PATH or auto-provisioned).
 func (c *Checker) RunAllChecks() *SystemCheckResult {
-	// No checks needed for Rust engine
-	c.results.AllPassed = true
-	c.results.CanProceed = true
+	c.checkUVX()
 	return c.results
 }
 
-// Dummy methods to satisfy interface if needed
-func (c *Checker) InstallUV() error { return nil }
-func (c *Checker) GetAlternativeInstallCommands() []string { return []string{} }
+func (c *Checker) checkUVX() {
+	c.results.UV = CheckResult{
+		Name:     "uvx runtime",
+		Required: true,
+	}
+
+	uvxPath, err := uvresolver.Resolve()
+	if err != nil {
+		c.results.UV.Status = StatusFailed
+		c.results.UV.Message = "uvx could not be provisioned: " + err.Error()
+		c.results.UV.Detail = "The CLI tried to download uv automatically but failed. Check your internet connection."
+		c.results.AllPassed = false
+		c.results.CanProceed = false
+		return
+	}
+
+	out, err := exec.Command(uvxPath, "--version").Output()
+	if err != nil {
+		c.results.UV.Status = StatusWarning
+		c.results.UV.Message = "uvx found but version check failed"
+		return
+	}
+
+	version := strings.TrimSpace(string(out))
+	c.results.UV.Status = StatusPassed
+	c.results.UV.Message = "uvx ready"
+	c.results.UV.Version = version
+}
+
+// GetAlternativeInstallCommands returns alternative install methods
+func (c *Checker) GetAlternativeInstallCommands() []string {
+	return []string{
+		"curl -LsSf https://astral.sh/uv/install.sh | sh",
+		"pip install uv",
+		"brew install uv",
+	}
+}

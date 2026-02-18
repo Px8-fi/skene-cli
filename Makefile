@@ -19,26 +19,8 @@ LDFLAGS=-ldflags "-s -w"
 # Default target
 all: build
 
-# Rust toolchain - use local install if available, otherwise system cargo
-LOCAL_RUST_DIR := $(CURDIR)/.local_rust
-CARGO := $(shell if [ -x "$(LOCAL_RUST_DIR)/bin/cargo" ]; then echo "$(LOCAL_RUST_DIR)/bin/cargo"; elif command -v cargo >/dev/null 2>&1; then echo "cargo"; else echo ""; fi)
-
-# Rust engine
-ENGINE_DIR=engine
-ENGINE_BINARY=$(ENGINE_DIR)/target/release/skene-engine
-
-engine-build:
-ifeq ($(CARGO),)
-	$(error "cargo not found. Install Rust via: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh")
-endif
-	@echo "Building Rust engine (using $(CARGO))..."
-	PATH="$(LOCAL_RUST_DIR)/bin:$(PATH)" cd $(ENGINE_DIR) && PATH="$(LOCAL_RUST_DIR)/bin:$(PATH)" $(CARGO) build --release
-	@mkdir -p $(BUILD_DIR)
-	cp $(ENGINE_BINARY) $(BUILD_DIR)/skene-engine
-	cp $(ENGINE_BINARY) .
-
-# Build the application
-build: engine-build
+# Build the application (single Go binary, no Rust engine)
+build:
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
 	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/skene

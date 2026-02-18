@@ -1,7 +1,7 @@
 package components
 
 import (
-	"skene-terminal-v2/internal/tui/styles"
+	"skene/internal/tui/styles"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"skene-terminal-v2/internal/tui"
-	"skene-terminal-v2/internal/tui/styles"
+	"skene/internal/tui"
+	"skene/internal/tui/styles"
 
 	tea "github.com/charmbracelet/bubbletea"
 )

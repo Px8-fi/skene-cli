@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"skene-terminal-v2/internal/tui/styles"
+	"skene/internal/tui/styles"
 
 	"github.com/charmbracelet/lipgloss"
 )

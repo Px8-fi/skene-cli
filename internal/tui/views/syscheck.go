@@ -2,9 +2,9 @@ package views
 
 import (
 	"fmt"
-	"skene-terminal-v2/internal/services/syscheck"
-	"skene-terminal-v2/internal/tui/components"
-	"skene-terminal-v2/internal/tui/styles"
+	"skene/internal/services/syscheck"
+	"skene/internal/tui/components"
+	"skene/internal/tui/styles"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -16,9 +16,8 @@ type SysCheckView struct {
 	results        *syscheck.SystemCheckResult
 	spinner        *components.Spinner
 	checking       bool
-	showInstall    bool // Show uv install option
-	ideRequestSent bool // Track if IDE request was sent
-	ideRequestPath string // Path to the request file
+	ideRequestSent bool
+	ideRequestPath string
 	header         *components.WizardHeader
 	buttonGroup    *components.ButtonGroup
 }
@@ -26,11 +25,10 @@ type SysCheckView struct {
 // NewSysCheckView creates a new system check view
 func NewSysCheckView() *SysCheckView {
 	return &SysCheckView{
-		spinner:     components.NewSpinner(),
-		checking:    true,
-		showInstall: false,
-		header:      components.NewWizardHeader(1, "System Check"),
-		buttonGroup: components.NewButtonGroup("Continue", "Install uv", "Ask IDE", "Quit"),
+		spinner:  components.NewSpinner(),
+		checking: true,
+		header:   components.NewWizardHeader(1, "System Check"),
+		buttonGroup: components.NewButtonGroup("Continue", "Quit"),
 	}
 }
 
@@ -45,7 +43,6 @@ func (v *SysCheckView) SetSize(width, height int) {
 func (v *SysCheckView) SetResults(results *syscheck.SystemCheckResult) {
 	v.results = results
 	v.checking = false
-	v.showInstall = !results.AllPassed && results.UV.Status == syscheck.StatusFailed
 }
 
 // SetIDERequestSent marks that IDE request was sent
@@ -74,11 +71,6 @@ func (v *SysCheckView) CanProceed() bool {
 	return v.results != nil && v.results.CanProceed
 }
 
-// PythonFailed returns true if Python check failed
-func (v *SysCheckView) PythonFailed() bool {
-	return v.results != nil && v.results.Python.Status == syscheck.StatusFailed
-}
-
 // GetButtonLabel returns current button label
 func (v *SysCheckView) GetButtonLabel() string {
 	return v.buttonGroup.GetActiveLabel()
@@ -104,16 +96,10 @@ func (v *SysCheckView) Render() string {
 		sectionWidth = 80
 	}
 
-	// Wizard header — same width as content box, left-aligned inside
 	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
-
-	// Check results section
 	checksSection := v.renderChecks(sectionWidth)
-
-	// Status message
 	statusMsg := v.renderStatus()
 
-	// Footer
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
@@ -123,7 +109,6 @@ func (v *SysCheckView) Render() string {
 			{Key: "ctrl+c", Desc: "quit"},
 		}))
 
-	// Combine — use Left so header and box stay aligned
 	block := lipgloss.JoinVertical(
 		lipgloss.Left,
 		wizHeader,
@@ -152,25 +137,10 @@ func (v *SysCheckView) renderChecks(width int) string {
 	var items []string
 
 	if v.checking {
-		items = append(items, v.spinner.SpinnerWithText("Checking Python installation..."))
-		items = append(items, styles.Muted.Render("  Waiting..."))
-		items = append(items, "")
-		items = append(items, v.spinner.SpinnerWithText("Checking uv runtime..."))
-		items = append(items, styles.Muted.Render("  Waiting..."))
+		items = append(items, v.spinner.SpinnerWithText("Setting up uvx runtime..."))
+		items = append(items, styles.Muted.Render("  This may take a moment on first run"))
 	} else if v.results != nil {
-		// Python check
-		items = append(items, renderCheckLine(v.results.Python))
-		items = append(items, "")
-
-		// UV check
 		items = append(items, renderCheckLine(v.results.UV))
-		items = append(items, "")
-
-		// Pip check (fallback info)
-		if v.results.UV.Status == syscheck.StatusFailed && v.results.Pip.Status == syscheck.StatusPassed {
-			items = append(items, renderCheckLine(v.results.Pip))
-			items = append(items, "")
-		}
 	}
 
 	content := lipgloss.JoinVertical(
@@ -223,9 +193,8 @@ func (v *SysCheckView) renderStatus() string {
 		return ""
 	}
 
-	// Show IDE request success message if sent
 	if v.ideRequestSent {
-		msg := styles.SuccessText.Render("✓ Request sent to IDE! Check Cursor chat or ask: 'help me fix the system check issues'")
+		msg := styles.SuccessText.Render("✓ Request sent to IDE!")
 		if v.ideRequestPath != "" {
 			msg += "\n" + styles.Muted.Render(fmt.Sprintf("Details saved to: %s", v.ideRequestPath))
 		}
@@ -236,16 +205,7 @@ func (v *SysCheckView) renderStatus() string {
 		return styles.SuccessText.Render("All checks passed! Your system is ready.")
 	}
 
-	if v.results.CanProceed {
-		return lipgloss.NewStyle().Foreground(styles.Warning).Render(
-			"uv is not installed but pip is available. You can continue or install uv for a better experience.")
-	}
-
-	if v.results.Python.Status == syscheck.StatusFailed {
-		return styles.Error.Render("Python 3.11+ is required. Please install it and try again.")
-	}
-
-	return styles.Error.Render("Some requirements are not met. Please fix the issues above.")
+	return styles.Error.Render("Failed to set up uvx runtime. Check your internet connection and try again.")
 }
 
 // GetHelpItems returns context-specific help

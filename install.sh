@@ -9,7 +9,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-REPO="Px8-fi/skene-cli"
+REPO="SkeneTechnologies/skene-cli"
 BINARY_NAME="skene"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 VERSION="${VERSION:-latest}"
@@ -286,11 +286,11 @@ main() {
                 original_dir=$(pwd)
                 
                 echo -e "${BLUE}Cloning repository to ${clone_dir}...${NC}"
-                if git clone --depth 1 --branch Rust-impelementation https://github.com/${REPO}.git "${clone_dir}" 2>/dev/null; then
+                if git clone --depth 1 https://github.com/${REPO}.git "${clone_dir}" 2>/dev/null; then
                     cd "${clone_dir}"
                     if [ -f "go.mod" ]; then
                         echo -e "${BLUE}Building from source...${NC}"
-                        echo -e "${YELLOW}Note: This may take a few minutes if Rust engine needs to be built...${NC}"
+                        echo -e "${YELLOW}Building Go binary...${NC}"
                         # build_local outputs path to stdout, errors to stderr
                         # Capture stdout for path, let stderr show errors
                         rel_path=$(build_local 2>/dev/null | tail -1)  # Get last line only, ignore stderr

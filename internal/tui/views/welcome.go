@@ -2,8 +2,8 @@ package views
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
-	"skene-terminal-v2/internal/tui/components"
-	"skene-terminal-v2/internal/tui/styles"
+	"skene/internal/tui/components"
+	"skene/internal/tui/styles"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -69,7 +69,7 @@ func (v *WelcomeView) Render() string {
 	cta := center.Render(enterKey)
 
 	// Version info
-	version := center.Render(styles.Muted.Render("v0.2.0 • github.com/SkeneTechnologies/skene-growth"))
+	version := center.Render(styles.Muted.Render("v0.3.0 • github.com/SkeneTechnologies/skene-cli"))
 
 	// Footer help
 	footer := components.FooterHelp([]components.HelpItem{

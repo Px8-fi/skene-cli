@@ -3,7 +3,7 @@ package game
 import (
 	"fmt"
 	"math/rand"
-	"skene-terminal-v2/internal/tui/styles"
+	"skene/internal/tui/styles"
 	"strings"
 	"time"
 

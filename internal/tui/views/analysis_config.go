@@ -1,8 +1,8 @@
 package views
 
 import (
-	"skene-terminal-v2/internal/tui/components"
-	"skene-terminal-v2/internal/tui/styles"
+	"skene/internal/tui/components"
+	"skene/internal/tui/styles"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -44,21 +44,21 @@ func NewAnalysisConfigView(provider, model, projectDir string) *AnalysisConfigVi
 			{
 				ID:          "growth",
 				Name:        "Skene Growth",
-				Description: "Tech stack detection, growth feature discovery, and growth plan generation",
+				Description: "Tech stack detection, growth features, revenue leakage, growth plans (via uvx)",
 				URL:         "github.com/SkeneTechnologies/skene-growth",
 				Enabled:     true,
 			},
 			{
 				ID:          "skills",
 				Name:        "Skene Skills",
-				Description: "PLG analysis skills for Claude Code (analyze, generate manifests, templates)",
+				Description: "PLG analysis skills for Claude Code — installed alongside growth",
 				URL:         "github.com/SkeneTechnologies/skene-skills",
 				Enabled:     true,
 			},
 			{
 				ID:          "cookbook",
 				Name:        "Skene Cookbook",
-				Description: "700+ AI skills for PLG, marketing, security, DevEx, and more",
+				Description: "700+ AI skills for PLG, marketing, security, DevEx — installed alongside growth",
 				URL:         "github.com/SkeneTechnologies/skene-cookbook",
 				Enabled:     true,
 			},
@@ -219,7 +219,7 @@ func (v *AnalysisConfigView) renderSummary(width int) string {
 
 func (v *AnalysisConfigView) renderDefaultQuestion(width int) string {
 	question := styles.Body.Render("Use recommended settings?")
-	desc := styles.Muted.Render("Default runs all Skene packages (Growth, Skills, Cookbook)")
+	desc := styles.Muted.Render("Default installs and runs all Skene packages via uvx")
 	buttons := v.buttonGroup.Render()
 
 	content := lipgloss.JoinVertical(

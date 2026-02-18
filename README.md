@@ -1,6 +1,6 @@
 # Skene CLI
 
-A terminal interface for the [Skene Growth](https://github.com/SkeneTechnologies/skene-growth) ecosystem. Guides you through codebase analysis, growth plan generation, and implementation -- all from the terminal. Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea).
+A terminal interface for the [Skene](https://github.com/SkeneTechnologies) ecosystem. Guides you through selecting a repository, choosing AI providers, and running Skene open-source libraries -- all from the terminal. Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea).
 
 <p align="center">
   <img src="designs/Step%201.png" width="400" alt="Welcome Screen" />
@@ -9,7 +9,7 @@ A terminal interface for the [Skene Growth](https://github.com/SkeneTechnologies
 
 ## What It Does
 
-Skene CLI is the interactive front-end for three Skene packages that work together:
+Skene CLI is the interactive front-end that installs and runs three Skene packages in your repository via `uvx`:
 
 | Package | Purpose |
 |---------|---------|
@@ -18,6 +18,8 @@ Skene CLI is the interactive front-end for three Skene packages that work togeth
 | [**Skene Cookbook**](https://github.com/SkeneTechnologies/skene-cookbook) | 700+ AI skills for PLG, marketing, security, DevEx, and more |
 
 By default all three packages are used during analysis. You can choose a subset in the advanced configuration screen.
+
+The CLI itself does **not** perform any analysis -- it orchestrates the external libraries by running them via `uvx` in your selected repository directory.
 
 ## Features
 
@@ -28,8 +30,8 @@ By default all three packages are used during analysis. You can choose a subset 
 - **Existing analysis detection** -- detects previous `skene-context/` output and offers to view or rerun
 - **Multi-phase analysis** -- animated progress with live terminal output
 - **Tabbed results dashboard** -- view growth plans, manifests, and product docs
-- **Next steps menu** -- run `plan`, `build`, `status`, or re-analyze directly from the CLI
-- **Self-contained** -- everything runs through the bundled Rust engine, no Python or uv required
+- **Next steps menu** -- run `plan`, `build`, `validate`, or re-analyze directly from the CLI
+- **Delegates to libraries** -- all analysis runs via `uvx skene-growth` in your selected repo
 - **Error handling** -- severity-based error display with suggestions, retry, and go back
 - **Cross-platform** -- macOS, Linux, and Windows
 - **Mini-game** -- space shooter while you wait
@@ -37,7 +39,8 @@ By default all three packages are used during analysis. You can choose a subset 
 ## Prerequisites
 
 - Go 1.22+ (for building from source)
-- Rust toolchain (for building the analysis engine from source; a local copy is installed automatically by `make build` if not present)
+
+No other prerequisites are needed. The CLI automatically downloads the [uv](https://docs.astral.sh/uv/) runtime on first use to `~/.skene/bin/`. If you already have `uvx` in your PATH, that is used instead.
 
 ## Installation
 
@@ -63,7 +66,7 @@ cd skene-cli
 git clone https://github.com/SkeneTechnologies/skene-cli
 cd skene-cli
 make install   # download Go dependencies
-make build     # build binary + Rust engine
+make build     # build Go binary
 make run       # run the application
 ```
 
@@ -71,12 +74,6 @@ make run       # run the application
 
 ```bash
 INSTALL_DIR=~/bin ./install.sh
-```
-
-### Specific Version
-
-```bash
-VERSION=v0.2.0 ./install.sh
 ```
 
 ### Verify
@@ -102,8 +99,8 @@ Welcome
     -> Model selection
       -> Authentication (magic link, API key, or local model detection)
         -> Project directory (detects existing analysis if present)
-          -> Analysis configuration (default or custom package/option selection)
-            -> Running analysis (live progress + terminal output)
+          -> Analysis configuration (default or custom package selection)
+            -> Running analysis (uvx skene-growth analyze . with live progress)
               -> Results dashboard (Growth Plan | Manifest | Product Docs)
                 -> Next steps
 ```
@@ -117,12 +114,7 @@ When you select a project directory that already contains a `skene-context/` fol
 
 ### Analysis Configuration
 
-The default configuration runs all three Skene packages. Selecting "No" on the default question opens the advanced screen where you can:
-
-- Toggle individual packages (Skene Growth, Skene Skills, Skene Cookbook)
-- Enable/disable product docs generation
-- Set business type
-- Toggle verbose output
+The default configuration runs all three Skene packages. Selecting "No" on the default question opens the advanced screen where you can toggle individual packages (Skene Growth, Skene Skills, Skene Cookbook).
 
 ### Next Steps
 
@@ -132,13 +124,13 @@ After analysis completes, the next steps menu offers:
 |--------|-------------|
 | Generate Growth Plan | Prioritised growth plan with implementation roadmap |
 | Build Implementation Prompt | Ready-to-use prompt for Cursor, Claude, or other AI tools |
-| Check Loop Status | Verify which growth loop requirements are implemented |
+| Validate Manifest | Validate the growth manifest against the schema |
 | Re-run Analysis | Analyse the codebase again |
 | Open Generated Files | Open `./skene-context/` in your file manager |
 | Change Configuration | Return to provider selection |
 | Exit | Close Skene CLI |
 
-All commands run through the bundled Rust engine -- no external tools required.
+All commands run via `uvx skene-growth` in your selected repository directory.
 
 ### Keyboard Controls
 
@@ -226,19 +218,15 @@ skene-cli/
 │   │       ├── next_steps.go            # Post-analysis actions
 │   │       └── error.go                 # Error display
 │   ├── services/
-│   │   ├── analyzer/analyzer.go         # Project analysis
 │   │   ├── auth/callback.go             # OAuth callback server
 │   │   ├── config/manager.go            # Config file management
 │   │   ├── growth/
-│   │   │   ├── engine.go                # Analysis engine
-│   │   │   └── engine_rust.go           # Rust engine wrapper
+│   │   │   └── engine.go                # uvx command spawner
 │   │   ├── ide/communicator.go          # IDE integration
-│   │   ├── installer/installer.go       # Package installer
-│   │   ├── llm/client.go               # LLM API client
-│   │   └── syscheck/checker.go          # System checks
+│   │   ├── syscheck/checker.go          # System checks
+│   │   └── uvresolver/resolver.go       # Auto-provisions uv binary
 │   └── game/
 │       └── shooter.go                   # Space shooter mini-game
-├── engine/                              # Rust analysis engine source
 ├── designs/                             # Design reference images
 ├── Makefile
 ├── go.mod
@@ -247,16 +235,17 @@ skene-cli/
 
 ## Architecture
 
-### Rust Engine
+### Library Orchestration
 
-All analysis, planning, building, and status checks run through `skene-engine`, a Rust binary that communicates with the Go TUI via JSON over stdin/stdout. The engine handles:
+Skene CLI acts as an orchestrator. It does **not** contain analysis logic. Instead, it:
 
-- **analyze** -- codebase scanning, feature detection, growth loop analysis, manifest generation
-- **plan** -- generates a prioritised growth plan from the manifest
-- **build** -- generates a copy-paste implementation prompt for AI coding tools
-- **status** -- checks which growth features have been implemented
+1. Guides the user through provider, model, and project selection
+2. Auto-provisions `uv` if not already installed (downloads to `~/.skene/bin/` on first use)
+3. Spawns `uvx skene-growth analyze .` (and other commands) in the selected repository directory
+4. Streams output back to the TUI for live progress display
+5. Reads results from `{repo}/skene-context/` and displays them in the dashboard
 
-The Go side (`internal/services/growth/engine_rust.go`) locates the binary automatically and streams progress updates back to the UI in real time. No Python, uv, or external package managers are needed at runtime.
+Provider, model, and API key are passed to `uvx skene-growth` via CLI flags and environment variables.
 
 ### State Machine
 

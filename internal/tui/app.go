@@ -1,23 +1,20 @@
 package tui
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
-	"strings"
 	"time"
 
-	"skene-terminal-v2/internal/game"
-	"skene-terminal-v2/internal/services/auth"
-	"skene-terminal-v2/internal/services/config"
-	"skene-terminal-v2/internal/services/growth"
-	"skene-terminal-v2/internal/services/ide"
-	"skene-terminal-v2/internal/services/syscheck"
-	"skene-terminal-v2/internal/tui/components"
-	"skene-terminal-v2/internal/tui/styles"
-	"skene-terminal-v2/internal/tui/views"
+	"skene/internal/game"
+	"skene/internal/services/auth"
+	"skene/internal/services/config"
+	"skene/internal/services/growth"
+	"skene/internal/services/ide"
+	"skene/internal/services/syscheck"
+	"skene/internal/tui/components"
+	"skene/internal/tui/styles"
+	"skene/internal/tui/views"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -90,11 +87,6 @@ type NextStepOutputMsg struct {
 
 // NextStepDoneMsg is sent when a next-step command finishes
 type NextStepDoneMsg struct {
-	Error error
-}
-
-// UVInstallDoneMsg is sent when uv installation completes
-type UVInstallDoneMsg struct {
 	Error error
 }
 
@@ -397,21 +389,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				a.analyzingView.SetDone()
 			}
-		}
-
-	case UVInstallDoneMsg:
-		if msg.Error != nil {
-			a.showError(&views.ErrorInfo{
-				Code:       "UV_INSTALL_FAILED",
-				Title:      "Installation Failed",
-				Message:    msg.Error.Error(),
-				Suggestion: "This should not happen with the Rust engine.",
-				Severity:   views.SeverityWarning,
-				Retryable:  true,
-			})
-		} else {
-			// Re-run system checks
-			a.startSysCheck()
 		}
 
 	case IDEHelpSentMsg:
@@ -944,13 +921,14 @@ func (a *App) handleNextStepsKeys(key string) tea.Cmd {
 			return a.runEngineCommand("Generating Growth Plan", "plan")
 		case "build":
 			return a.runEngineCommand("Building Implementation Prompt", "build")
-		case "status":
-			return a.runEngineCommand("Checking Loop Status", "status")
+		case "validate":
+			return a.runEngineCommand("Validating Manifest", "validate")
 		case "open":
-			outputDir := a.configMgr.Config.OutputDir
-			if outputDir == "" {
-				outputDir = "./skene-context"
+			projectDir := a.configMgr.Config.ProjectDir
+			if projectDir == "" {
+				projectDir, _ = os.Getwd()
 			}
+			outputDir := filepath.Join(projectDir, "skene-context")
 			browser.OpenURL(outputDir)
 		}
 	case "esc":
@@ -1243,13 +1221,6 @@ func (a *App) startSysCheckCmd() tea.Cmd {
 	}
 }
 
-func (a *App) startUVInstallCmd() tea.Cmd {
-	checker := a.sysChecker
-	return func() tea.Msg {
-		err := checker.InstallUV()
-		return UVInstallDoneMsg{Error: err}
-	}
-}
 
 func (a *App) sendIDEHelpRequest() tea.Cmd {
 	results := a.sysChecker.GetResults()
@@ -1311,7 +1282,7 @@ func (a *App) runEngineCommand(title string, command string) tea.Cmd {
 	return func() tea.Msg {
 		engine := growth.NewEngine(cfg, func(update growth.PhaseUpdate) {
 			if p != nil {
-				p.Send(AnalysisPhaseMsg{Update: update})
+				p.Send(NextStepOutputMsg{Line: update.Message})
 			}
 		})
 
@@ -1319,19 +1290,19 @@ func (a *App) runEngineCommand(title string, command string) tea.Cmd {
 		switch command {
 		case "plan":
 			if p != nil {
-				p.Send(NextStepOutputMsg{Line: "Generating growth plan via skene-engine..."})
+				p.Send(NextStepOutputMsg{Line: "Running: uvx skene-growth plan ..."})
 			}
 			result = engine.GeneratePlan()
 		case "build":
 			if p != nil {
-				p.Send(NextStepOutputMsg{Line: "Building implementation prompt via skene-engine..."})
+				p.Send(NextStepOutputMsg{Line: "Running: uvx skene-growth build ..."})
 			}
 			result = engine.GenerateBuild()
-		case "status":
+		case "validate":
 			if p != nil {
-				p.Send(NextStepOutputMsg{Line: "Checking loop status via skene-engine..."})
+				p.Send(NextStepOutputMsg{Line: "Running: uvx skene-growth validate ..."})
 			}
-			result = engine.CheckStatus()
+			result = engine.ValidateManifest()
 		default:
 			return NextStepDoneMsg{Error: fmt.Errorf("unknown command: %s", command)}
 		}
@@ -1343,50 +1314,6 @@ func (a *App) runEngineCommand(title string, command string) tea.Cmd {
 	}
 }
 
-func (a *App) runNextStepCommand(title string, cmdStr string) tea.Cmd {
-	// Switch to a command view to show terminal output
-	a.analyzingView = views.NewCommandView(title)
-	a.analyzingView.SetSize(a.width, a.height)
-	a.analysisStartTime = time.Now()
-	a.state = StateAnalyzing
-
-	p := a.program
-	return func() tea.Msg {
-		// Show the command being run
-		if p != nil {
-			p.Send(NextStepOutputMsg{Line: "$ " + cmdStr})
-			p.Send(NextStepOutputMsg{Line: ""})
-		}
-
-		parts := strings.Fields(cmdStr)
-		cmd := exec.CommandContext(context.Background(), parts[0], parts[1:]...)
-
-		// Combine stdout and stderr so all output is visible
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			return NextStepDoneMsg{Error: fmt.Errorf("failed to create pipe: %w", err)}
-		}
-		cmd.Stderr = cmd.Stdout
-
-		if err := cmd.Start(); err != nil {
-			return NextStepDoneMsg{Error: fmt.Errorf("command not found: %s", parts[0])}
-		}
-
-		// Stream output line by line
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if p != nil {
-				p.Send(NextStepOutputMsg{Line: line})
-			}
-		}
-
-		if err := cmd.Wait(); err != nil {
-			return NextStepDoneMsg{Error: fmt.Errorf("exited with error")}
-		}
-		return NextStepDoneMsg{Error: nil}
-	}
-}
 
 func (a *App) waitForAuthCallback() tea.Cmd {
 	server := a.callbackServer
@@ -1444,17 +1371,32 @@ func (a *App) detectLocalModels() tea.Cmd {
 // analysisErrorSuggestion returns a contextual suggestion based on the error
 func analysisErrorSuggestion(err error) string {
 	s := err.Error()
-	if strings.Contains(s, "skene-engine") &&
-		(strings.Contains(s, "not found") || strings.Contains(s, "executable file not found") || strings.Contains(s, "$PATH")) {
-		return "Place skene-engine in the same directory as skene, or add it to your PATH. Run 'make build' if building from source."
+	if containsAny(s, "failed to locate uvx", "failed to download uv") {
+		return "The CLI could not provision the uvx runtime. Check your internet connection and try again."
 	}
-	if strings.Contains(s, "API key") || strings.Contains(s, "401") || strings.Contains(s, "unauthorized") {
+	if containsAny(s, "No module named", "not found: skene-growth", "package not found") {
+		return "The skene-growth package could not be found. Make sure it is published or install it manually."
+	}
+	if containsAny(s, "API key", "401", "unauthorized") {
 		return "Check your API key, ensure it has the required permissions, and try again."
 	}
-	if strings.Contains(s, "network") || strings.Contains(s, "connection") || strings.Contains(s, "timeout") {
+	if containsAny(s, "network", "connection", "timeout") {
 		return "Check your network connection and try again."
 	}
-	return "Check the logs for details and try again."
+	return "Check the output above for details and try again."
+}
+
+func containsAny(s string, substrs ...string) bool {
+	for _, sub := range substrs {
+		if len(s) >= len(sub) {
+			for i := 0; i <= len(s)-len(sub); i++ {
+				if s[i:i+len(sub)] == sub {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func (a *App) showError(err *views.ErrorInfo) {
@@ -1771,18 +1713,20 @@ func (a *App) buildEngineConfig() growth.EngineConfig {
 	if outputDir == "" {
 		outputDir = "./skene-context"
 	}
-	// Resolve relative OutputDir against ProjectDir
 	if !filepath.IsAbs(outputDir) {
 		outputDir = filepath.Join(projectDir, outputDir)
 	}
 
 	return growth.EngineConfig{
-		Provider:   a.configMgr.Config.Provider,
-		Model:      a.configMgr.Config.Model,
-		APIKey:     a.configMgr.Config.APIKey,
-		BaseURL:    a.configMgr.Config.BaseURL,
-		ProjectDir: projectDir,
-		OutputDir:  outputDir,
+		Provider:    a.configMgr.Config.Provider,
+		Model:       a.configMgr.Config.Model,
+		APIKey:      a.configMgr.Config.APIKey,
+		BaseURL:     a.configMgr.Config.BaseURL,
+		ProjectDir:  projectDir,
+		OutputDir:   outputDir,
+		UseGrowth:   a.configMgr.Config.UseGrowth,
+		UseSkills:   a.configMgr.Config.UseSkills,
+		UseCookbook: a.configMgr.Config.UseCookbook,
 	}
 }
 

@@ -2,9 +2,9 @@ package views
 
 import (
 	"fmt"
-	"skene-terminal-v2/internal/services/config"
-	"skene-terminal-v2/internal/tui/components"
-	"skene-terminal-v2/internal/tui/styles"
+	"skene/internal/services/config"
+	"skene/internal/tui/components"
+	"skene/internal/tui/styles"
 
 	"github.com/charmbracelet/lipgloss"
 )

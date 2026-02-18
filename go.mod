@@ -1,4 +1,4 @@
-module skene-terminal-v2
+module skene
 
 go 1.24.2
 

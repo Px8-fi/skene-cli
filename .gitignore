@@ -1,18 +1,23 @@
-# OS
-.DS_Store
-internal/.DS_Store
-
 # Binaries
 skene
 skene-cli
 build/
 
-# Output / generated
+# Generated output
 skene-context/
+
+# OS
+**/.DS_Store
+Thumbs.db
+
+# Temp
 tmp/
+*.log
 
 # IDE / editor
+.cursor/
 .idea/
 .vscode/
 *.swp
 *.swo
+*~

@@ -6,7 +6,7 @@ BUILD_DIR=build
 
 # GitHub release settings (bump VERSION when cutting a new release)
 REPO=Px8-fi/skene-cli
-VERSION=v0.3.0
+VERSION=v030
 
 # Build flags
 LDFLAGS=-ldflags "-s -w"

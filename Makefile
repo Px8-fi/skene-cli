@@ -4,6 +4,10 @@
 BINARY_NAME=skene
 BUILD_DIR=build
 
+# GitHub release settings (bump VERSION when cutting a new release)
+REPO=Px8-fi/skene-cli
+VERSION=v0.3.0
+
 # Go parameters
 GOCMD=go
 GOBUILD=$(GOCMD) build
@@ -19,18 +23,42 @@ LDFLAGS=-ldflags "-s -w"
 # Default target
 all: build
 
-# Build the application (single Go binary, no Rust engine)
+# Build the application -- uses Go if available, otherwise downloads pre-built binary
 build:
-	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
-	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/skene
+	@if command -v $(GOCMD) >/dev/null 2>&1; then \
+		echo "Building $(BINARY_NAME) from source..."; \
+		$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/skene; \
+	else \
+		echo "Go not found. Downloading pre-built binary from GitHub Releases..."; \
+		OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
+		ARCH=$$(uname -m); \
+		case "$$ARCH" in \
+			x86_64|amd64) ARCH=amd64 ;; \
+			arm64|aarch64) ARCH=arm64 ;; \
+			*) echo "Error: unsupported architecture $$ARCH"; exit 1 ;; \
+		esac; \
+		ASSET="$(BINARY_NAME)-$$OS-$$ARCH"; \
+		URL="https://github.com/$(REPO)/releases/download/$(VERSION)/$$ASSET.tar.gz"; \
+		echo "Downloading $$URL ..."; \
+		curl -fSL -o $(BUILD_DIR)/$$ASSET.tar.gz "$$URL" || \
+			(echo "Error: download failed. Check that release $(VERSION) exists at https://github.com/$(REPO)/releases"; exit 1); \
+		tar -xzf $(BUILD_DIR)/$$ASSET.tar.gz -C $(BUILD_DIR); \
+		mv $(BUILD_DIR)/$$ASSET $(BUILD_DIR)/$(BINARY_NAME); \
+		rm -f $(BUILD_DIR)/$$ASSET.tar.gz; \
+		chmod +x $(BUILD_DIR)/$(BINARY_NAME); \
+		xattr -d com.apple.quarantine $(BUILD_DIR)/$(BINARY_NAME) 2>/dev/null || true; \
+		echo "Downloaded $(BINARY_NAME) $(VERSION) for $$OS/$$ARCH"; \
+	fi
 
-# Run the application
+# Run the application (builds first if binary doesn't exist)
 run:
-	@echo "Running $(BINARY_NAME)..."
-	$(GORUN) ./cmd/skene
+	@if [ ! -f $(BUILD_DIR)/$(BINARY_NAME) ]; then \
+		$(MAKE) build; \
+	fi
+	@$(BUILD_DIR)/$(BINARY_NAME)
 
-# Development mode with live reload (requires air: go install github.com/air-verse/air@latest)
+# Development mode with live reload (requires Go + air)
 dev:
 	@which air > /dev/null 2>&1 || (echo "Installing air..." && go install github.com/air-verse/air@latest)
 	$(shell go env GOPATH)/bin/air
@@ -38,31 +66,31 @@ dev:
 # Clean build artifacts
 clean:
 	@echo "Cleaning..."
-	$(GOCLEAN)
+	@if command -v $(GOCMD) >/dev/null 2>&1; then $(GOCLEAN) 2>/dev/null || true; fi
 	rm -rf $(BUILD_DIR)
 
-# Install dependencies
+# Install dependencies (requires Go)
 install:
 	@echo "Installing dependencies..."
 	$(GOMOD) download
 	$(GOMOD) tidy
 
-# Run tests
+# Run tests (requires Go)
 test:
 	@echo "Running tests..."
 	$(GOTEST) -v ./...
 
-# Run linter (requires golangci-lint)
+# Run linter (requires Go + golangci-lint)
 lint:
 	@which golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci-lint/golangci-lint/cmd/golangci-lint@latest)
 	golangci-lint run
 
-# Format code
+# Format code (requires Go)
 fmt:
 	@echo "Formatting code..."
 	$(GOFMT) -s -w .
 
-# Build for multiple platforms
+# Build for multiple platforms (requires Go)
 build-all: build-linux build-darwin build-windows
 
 build-linux:
@@ -78,7 +106,7 @@ build-windows:
 	@echo "Building for Windows..."
 	GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe ./cmd/skene
 
-# Create release archives
+# Create release archives (requires Go)
 release: clean build-all
 	@echo "Packaging releases..."
 	tar -czf $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64.tar.gz -C $(BUILD_DIR) $(BINARY_NAME)-darwin-arm64
@@ -95,15 +123,15 @@ install-bin: build
 # Show help
 help:
 	@echo "Available targets:"
-	@echo "  build       - Build the application"
+	@echo "  build       - Build the application (downloads binary if Go is not installed)"
 	@echo "  run         - Run the application"
-	@echo "  dev         - Run with live reload"
+	@echo "  dev         - Run with live reload (requires Go)"
 	@echo "  clean       - Clean build artifacts"
-	@echo "  install     - Install dependencies"
-	@echo "  test        - Run tests"
-	@echo "  lint        - Run linter"
-	@echo "  fmt         - Format code"
-	@echo "  build-all   - Build for all platforms"
-	@echo "  release     - Build and package for release"
+	@echo "  install     - Install Go dependencies"
+	@echo "  test        - Run tests (requires Go)"
+	@echo "  lint        - Run linter (requires Go)"
+	@echo "  fmt         - Format code (requires Go)"
+	@echo "  build-all   - Build for all platforms (requires Go)"
+	@echo "  release     - Build and package for release (requires Go)"
 	@echo "  install-bin - Install binary to system"
 	@echo "  help        - Show this help"

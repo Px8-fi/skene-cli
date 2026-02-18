@@ -38,55 +38,41 @@ The CLI itself does **not** perform any analysis -- it orchestrates the external
 
 ## Prerequisites
 
-- Go 1.22+ (for building from source)
-
-No other prerequisites are needed. The CLI automatically downloads the [uv](https://docs.astral.sh/uv/) runtime on first use to `~/.skene/bin/`. If you already have `uvx` in your PATH, that is used instead.
+None. No Go, Python, or other tools need to be installed. The Makefile downloads a pre-built binary if Go is not present, and the CLI automatically downloads the [uv](https://docs.astral.sh/uv/) runtime on first use.
 
 ## Installation
 
-### Quick Install
+### Clone and Run (recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SkeneTechnologies/skene-cli/main/install.sh | bash
-```
-
-This detects your platform, downloads the correct binary (or builds from source), and installs to `/usr/local/bin/skene`.
-
-### Clone and Install
-
-```bash
-git clone https://github.com/SkeneTechnologies/skene-cli
+git clone https://github.com/Px8-fi/skene-cli.git
 cd skene-cli
-./install.sh
+make build   # builds from source if Go is installed, otherwise downloads pre-built binary
+make run
 ```
 
-### Build from Source
+This works on macOS (Intel + Apple Silicon), Linux (x86_64), and Windows (x86_64).
+
+### Quick Install (script)
 
 ```bash
-git clone https://github.com/SkeneTechnologies/skene-cli
+curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh | bash
+```
+
+### Build from Source (requires Go 1.22+)
+
+```bash
+git clone https://github.com/Px8-fi/skene-cli.git
 cd skene-cli
 make install   # download Go dependencies
-make build     # build Go binary
-make run       # run the application
+make build     # build from source
+make run
 ```
 
-### Custom Install Location
+### Install Binary to PATH
 
 ```bash
-INSTALL_DIR=~/bin ./install.sh
-```
-
-### Verify
-
-```bash
-skene --version
-```
-
-If the command is not found, add the install directory to your PATH:
-
-```bash
-echo 'export PATH="/usr/local/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
+make install-bin   # copies build/skene to /usr/local/bin
 ```
 
 ## Usage

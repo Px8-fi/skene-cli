@@ -1109,12 +1109,8 @@ func (a *App) transitionToResultsFromExisting() {
 	projectDir := a.configMgr.Config.ProjectDir
 	outputDir := filepath.Join(projectDir, "skene-context")
 
-	// Try to load existing analysis files
 	growthPlan := loadFileContent(filepath.Join(outputDir, "growth-plan.md"))
-	if growthPlan == "" {
-		growthPlan = loadFileContent(filepath.Join(outputDir, "growth-template.json"))
-	}
-	manifest := loadFileContent(filepath.Join(outputDir, "growth-manifest.json"))
+	manifest := loadFileContent(filepath.Join(outputDir, "manifest.md"))
 	productDocs := loadFileContent(filepath.Join(outputDir, "product-docs.md"))
 
 	a.resultsView = views.NewResultsViewWithContent(growthPlan, manifest, productDocs)

@@ -84,10 +84,7 @@ func (e *Engine) Run(ctx context.Context) *AnalysisResult {
 
 	outputDir := e.resolveOutputDir()
 	result.GrowthPlan = loadFileContent(filepath.Join(outputDir, "growth-plan.md"))
-	if result.GrowthPlan == "" {
-		result.GrowthPlan = loadFileContent(filepath.Join(outputDir, "growth-template.json"))
-	}
-	result.Manifest = loadFileContent(filepath.Join(outputDir, "growth-manifest.json"))
+	result.Manifest = loadFileContent(filepath.Join(outputDir, "manifest.md"))
 	result.ProductDocs = loadFileContent(filepath.Join(outputDir, "product-docs.md"))
 
 	return result
@@ -131,7 +128,7 @@ func (e *Engine) GenerateBuild() *AnalysisResult {
 func (e *Engine) ValidateManifest() *AnalysisResult {
 	result := &AnalysisResult{}
 
-	manifestPath := filepath.Join(e.resolveOutputDir(), "growth-manifest.json")
+	manifestPath := filepath.Join(e.resolveOutputDir(), "manifest.md")
 	args := []string{"skene-growth", "validate", manifestPath}
 
 	if err := e.runUVX(context.Background(), args); err != nil {

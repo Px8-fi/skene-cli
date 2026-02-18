@@ -3,7 +3,6 @@ package views
 import (
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
@@ -29,21 +28,17 @@ type ResultsView struct {
 	header    *components.WizardHeader
 }
 
-// NewResultsView creates a new results view with default placeholder content
+// NewResultsView creates an empty results view (no tabs until content is provided)
 func NewResultsView() *ResultsView {
-	return NewResultsViewWithContent(
-		getResultsGrowthPlanContent(),
-		getResultsManifestContent(),
-		getResultsProductDocsContent(),
-	)
+	return NewResultsViewWithContent("", "", "")
 }
 
-// NewResultsViewWithContent creates a new results view with custom content
+// NewResultsViewWithContent creates a results view showing only the tabs
+// for which skene-growth produced actual content.
 func NewResultsViewWithContent(growthPlan, manifest, productDocs string) *ResultsView {
 	vp := viewport.New(60, 20)
 
 	v := &ResultsView{
-		tabs:      []string{"Growth Plan", "Manifest", "Product Docs"},
 		activeTab: 0,
 		contents:  make(map[string]string),
 		viewport:  vp,
@@ -51,24 +46,25 @@ func NewResultsViewWithContent(growthPlan, manifest, productDocs string) *Result
 		header:    components.NewWizardHeader(7, "Analysis Results"),
 	}
 
-	// Set content (use provided or fall back to defaults)
 	if growthPlan != "" {
+		v.tabs = append(v.tabs, "Growth Plan")
 		v.contents["Growth Plan"] = growthPlan
-	} else {
-		v.contents["Growth Plan"] = getResultsGrowthPlanContent()
 	}
 	if manifest != "" {
+		v.tabs = append(v.tabs, "Manifest")
 		v.contents["Manifest"] = manifest
-	} else {
-		v.contents["Manifest"] = getResultsManifestContent()
 	}
 	if productDocs != "" {
+		v.tabs = append(v.tabs, "Product Docs")
 		v.contents["Product Docs"] = productDocs
-	} else {
-		v.contents["Product Docs"] = getResultsProductDocsContent()
 	}
 
-	v.viewport.SetContent(v.contents["Growth Plan"])
+	if len(v.tabs) == 0 {
+		v.tabs = append(v.tabs, "Results")
+		v.contents["Results"] = "No analysis output found in skene-context/.\nRun the analysis first."
+	}
+
+	v.viewport.SetContent(v.contents[v.tabs[0]])
 
 	return v
 }
@@ -153,28 +149,21 @@ func (v *ResultsView) Render() string {
 		sectionWidth = 80
 	}
 
-	// Wizard header
 	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
-	// Success banner
 	banner := styles.SuccessText.Render("Skene Analysis Complete")
 
-	// Tabs
 	tabsView := v.renderTabs()
 
-	// Content
 	contentBox := v.renderContentBox()
 
-	// Action hint
 	actionHint := styles.Accent.Render("Press 'n' for next steps")
 
-	// Footer
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
 		Render(components.WizardResultsHelp())
 
-	// Combine
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		wizHeader,
@@ -243,175 +232,4 @@ func (v *ResultsView) GetHelpItems() []components.HelpItem {
 		{Key: "n", Desc: "next steps"},
 		{Key: "ctrl+c", Desc: "quit"},
 	}
-}
-
-func getResultsGrowthPlanContent() string {
-	return strings.TrimSpace(`
-## CONFIDENTIAL ENGINEERING MEMO
-
-Date: 2026-02-09
-Subject: Growth Strategy Analysis
-From: Council of Growth Engineers
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-EXECUTIVE SUMMARY
-
-Your codebase has been analyzed for Product-Led Growth
-opportunities. Below are the key findings and actionable
-recommendations.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. STRIP TO THE GROWTH CORE
-
-The fundamental growth problem is maximizing the number
-of codebases Skene analyzes. Every codebase analyzed is a
-potential source of:
-
-  • New Users — owner and collaborators
-  • New Codebases — related project recommendations
-  • Improved AI — more data to refine analysis
-
-2. SELECTED GROWTH LOOPS
-
-Loop 1: Public Scan Leaderboard
-  Priority: HIGH | Impact: 4.2x user acquisition
-  - Allow users to make scans public
-  - Create competitive leaderboards
-  - Gamify code quality improvements
-
-Loop 2: Collaborative Analysis
-  Priority: HIGH | Impact: 3.1x retention
-  - Team-based scanning features
-  - Shared insights and recommendations
-  - Cross-project pattern detection
-
-Loop 3: AI-Powered Recommendations
-  Priority: MEDIUM | Impact: 2.5x engagement
-  - Suggest related codebases to scan
-  - Identify similar projects
-  - Build a network effect
-
-3. IMPLEMENTATION ROADMAP
-
-Week 1-2: Ship public scan feature
-Week 3-4: Build leaderboard infrastructure
-Week 5-6: Implement sharing and collaboration
-Week 7-8: Launch recommendation engine
-
-4. SUCCESS METRICS
-
-  • Scans per user per week: target 3+
-  • Viral coefficient (K-factor): target 1.2
-  • Time to first collaboration: <48 hours
-  • Cross-project engagement: 35%
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Execute. No meetings.
-`)
-}
-
-func getResultsManifestContent() string {
-	return strings.TrimSpace(`
-SKENE GROWTH MANIFEST v2.0
-Generated: 2026-02-09
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-TECH STACK DETECTION
-
-  Framework:  detected
-  Language:   detected
-  Database:   detected
-  Auth:       detected
-  Deployment: detected
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-CURRENT GROWTH FEATURES
-
-  ✓ User authentication flow
-  ✓ API key management
-  ✓ Configuration system
-  ! No social sharing detected
-  ! No referral system detected
-  ! No usage analytics detected
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-REVENUE LEAKAGE ISSUES
-
-  ⚠ No monetization layer detected
-  ⚠ Missing conversion funnels
-  ⚠ No upsell triggers found
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-GROWTH OPPORTUNITIES
-
-  1. [HIGH] Social sharing for analysis results
-  2. [HIGH] Team collaboration features
-  3. [MEDIUM] Public analysis leaderboard
-  4. [MEDIUM] Integration marketplace
-  5. [LOW] Webhook notifications
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-GENERATED FILES
-
-  ./skene-context/growth-manifest.json
-  ./skene-context/growth-template.json
-  ./skene-context/product-docs.md
-`)
-}
-
-func getResultsProductDocsContent() string {
-	return strings.TrimSpace(`
-PRODUCT DOCUMENTATION
-Auto-generated by Skene CLI
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-PRODUCT OVERVIEW
-
-  Tagline: [Auto-detected from codebase]
-  Target Audience: Developers and teams
-  Value Proposition: Growth analysis for code
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-DETECTED FEATURES
-
-  1. Code Analysis Engine
-     Scans codebases for growth patterns
-     and opportunities.
-
-  2. AI-Powered Insights
-     Uses LLM providers to generate growth
-     strategies and recommendations.
-
-  3. Configuration Management
-     Flexible config system supporting
-     multiple providers and models.
-
-  4. Multi-Provider Support
-     Works with OpenAI, Anthropic, Gemini,
-     local models, and custom endpoints.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-GETTING STARTED
-
-  1. Run 'uvx skene-growth analyze .'
-  2. Review growth-manifest.json
-  3. Generate growth plan with 'uvx skene-growth plan'
-  4. Build implementation with 'uvx skene-growth build'
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-For more information:
-  https://github.com/SkeneTechnologies/skene-cli
-`)
 }

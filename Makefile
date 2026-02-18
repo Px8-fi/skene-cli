@@ -61,7 +61,7 @@ run:
 # Development mode with live reload (requires Go + air)
 dev:
 	@which air > /dev/null 2>&1 || (echo "Installing air..." && go install github.com/air-verse/air@latest)
-	$(shell go env GOPATH)/bin/air
+	@$$(go env GOPATH)/bin/air
 
 # Clean build artifacts
 clean:

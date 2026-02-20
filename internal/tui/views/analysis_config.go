@@ -123,17 +123,10 @@ func (v *AnalysisConfigView) IsDefaultMode() bool {
 
 // GetUseGrowth returns if Skene Growth is enabled
 func (v *AnalysisConfigView) GetUseGrowth() bool {
-	return v.packages[0].Enabled
-}
-
-// GetUseSkills returns if Skene Skills is enabled
-func (v *AnalysisConfigView) GetUseSkills() bool {
-	return v.packages[1].Enabled
-}
-
-// GetUseCookbook returns if Skene Cookbook is enabled
-func (v *AnalysisConfigView) GetUseCookbook() bool {
-	return v.packages[2].Enabled
+	if len(v.packages) > 0 {
+		return v.packages[0].Enabled
+	}
+	return true
 }
 
 // Render the analysis config view

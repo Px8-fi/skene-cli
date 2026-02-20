@@ -18,9 +18,7 @@ type Config struct {
 	Verbose      bool   `json:"verbose"`
 	ProjectDir   string `json:"project_dir"`
 	BaseURL      string `json:"base_url,omitempty"`
-	UseGrowth    bool   `json:"use_growth"`
-	UseSkills    bool   `json:"use_skills"`
-	UseCookbook  bool   `json:"use_cookbook"`
+	UseGrowth bool `json:"use_growth"`
 }
 
 // Manager handles configuration file operations
@@ -38,11 +36,9 @@ func NewManager(projectDir string) *Manager {
 		ProjectConfigPath: filepath.Join(projectDir, constants.ProjectConfigFile),
 		UserConfigPath:    filepath.Join(homeDir, constants.UserConfigDir, constants.UserConfigFile),
 		Config: &Config{
-			OutputDir:   constants.DefaultOutputDir,
-			Verbose:     true,
-			UseGrowth:   true,
-			UseSkills:   true,
-			UseCookbook: true,
+			OutputDir: constants.DefaultOutputDir,
+			Verbose:   true,
+			UseGrowth: true,
 		},
 	}
 }

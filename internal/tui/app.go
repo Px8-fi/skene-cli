@@ -139,6 +139,10 @@ type App struct {
 	// Timing
 	analysisStartTime time.Time
 
+	// Cancellation for running processes
+	cancelFunc      context.CancelFunc
+	analyzingOrigin AppState // state to return to when cancelling/failing
+
 	// Auth state
 	authCountdown  int
 	callbackServer *auth.CallbackServer
@@ -722,11 +726,22 @@ func (a *App) handleAnalyzingKeys(key string) tea.Cmd {
 			return game.GameTickCmd()
 		}
 	case "esc":
-		// Go back to next steps when command is done or failed
-		if a.analyzingView != nil && a.analyzingView.IsDone() {
-			a.state = StateNextSteps
-			a.nextStepsView = views.NewNextStepsView()
-			a.nextStepsView.SetSize(a.width, a.height)
+		if a.analyzingView == nil {
+			return nil
+		}
+		if a.analyzingView.HasFailed() {
+			// Failed: go back to the origin so the user can retry
+			a.navigateBackFromAnalyzing()
+		} else if a.analyzingView.IsDone() {
+			// Succeeded: go back to origin (next steps or analysis config)
+			a.navigateBackFromAnalyzing()
+		} else {
+			// Still running: cancel and go back
+			if a.cancelFunc != nil {
+				a.cancelFunc()
+				a.cancelFunc = nil
+			}
+			a.navigateBackFromAnalyzing()
 		}
 	}
 	return nil
@@ -979,8 +994,6 @@ func (a *App) refreshResultsView() {
 func (a *App) applyAnalysisConfig() {
 	if a.analysisConfigView != nil {
 		a.configMgr.Config.UseGrowth = a.analysisConfigView.GetUseGrowth()
-		a.configMgr.Config.UseSkills = a.analysisConfigView.GetUseSkills()
-		a.configMgr.Config.UseCookbook = a.analysisConfigView.GetUseCookbook()
 		a.configMgr.Config.Verbose = true
 	}
 }
@@ -1007,9 +1020,39 @@ func (a *App) navigateBackFromProjectDir() {
 	}
 }
 
+func (a *App) navigateBackFromAnalyzing() {
+	// Clean up the cancel func if still set
+	if a.cancelFunc != nil {
+		a.cancelFunc()
+		a.cancelFunc = nil
+	}
+
+	switch a.analyzingOrigin {
+	case StateNextSteps:
+		a.refreshResultsView()
+		a.state = StateNextSteps
+		if a.nextStepsView == nil {
+			a.nextStepsView = views.NewNextStepsView()
+		}
+		a.nextStepsView.SetSize(a.width, a.height)
+	case StateAnalysisConfig:
+		a.state = StateAnalysisConfig
+		if a.analysisConfigView != nil {
+			a.analysisConfigView.SetSize(a.width, a.height)
+		}
+	default:
+		a.state = StateAnalysisConfig
+	}
+}
+
 func (a *App) navigateBackFromError() {
-	// Navigate to the state that preceded the error, but only if
-	// its view is initialized. Fall back to provider select which is always initialized.
+	// If the error came from a running process, skip back to the origin
+	// so the user can re-trigger it rather than landing on a dead view.
+	if a.prevState == StateAnalyzing {
+		a.navigateBackFromAnalyzing()
+		return
+	}
+
 	target := a.prevState
 	switch target {
 	case StateModelSelect:
@@ -1036,10 +1079,6 @@ func (a *App) navigateBackFromError() {
 		if a.analysisConfigView == nil {
 			target = StateProjectDir
 		}
-	case StateAnalyzing:
-		if a.analyzingView == nil {
-			target = StateProjectDir
-		}
 	}
 	a.state = target
 }
@@ -1052,6 +1091,7 @@ func (a *App) startAnalysis() tea.Cmd {
 	a.analyzingView = views.NewAnalyzingView()
 	a.analyzingView.SetSize(a.width, a.height)
 	a.analysisStartTime = time.Now()
+	a.analyzingOrigin = StateAnalysisConfig
 	a.state = StateAnalyzing
 	return a.startRealAnalysisCmd(a.program)
 }
@@ -1059,9 +1099,10 @@ func (a *App) startAnalysis() tea.Cmd {
 func (a *App) startRealAnalysisCmd(p *tea.Program) tea.Cmd {
 	cfg := a.buildEngineConfig()
 
-	return func() tea.Msg {
-		ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	a.cancelFunc = cancel
 
+	return func() tea.Msg {
 		engine := growth.NewEngine(cfg, func(update growth.PhaseUpdate) {
 			if p != nil {
 				p.Send(AnalysisPhaseMsg{Update: update})
@@ -1080,12 +1121,20 @@ func (a *App) runEngineCommand(title string, command string) tea.Cmd {
 	a.analyzingView = views.NewCommandView(title)
 	a.analyzingView.SetSize(a.width, a.height)
 	a.analysisStartTime = time.Now()
+	a.analyzingOrigin = StateNextSteps
 	a.state = StateAnalyzing
 
 	cfg := a.buildEngineConfig()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	a.cancelFunc = cancel
+
 	p := a.program
 	return func() tea.Msg {
+		if ctx.Err() != nil {
+			return NextStepDoneMsg{Error: ctx.Err()}
+		}
+
 		engine := growth.NewEngine(cfg, func(update growth.PhaseUpdate) {
 			if p != nil {
 				p.Send(NextStepOutputMsg{Line: update.Message})
@@ -1427,9 +1476,7 @@ func (a *App) buildEngineConfig() growth.EngineConfig {
 		BaseURL:     a.configMgr.Config.BaseURL,
 		ProjectDir:  projectDir,
 		OutputDir:   outputDir,
-		UseGrowth:   a.configMgr.Config.UseGrowth,
-		UseSkills:   a.configMgr.Config.UseSkills,
-		UseCookbook: a.configMgr.Config.UseCookbook,
+		UseGrowth: a.configMgr.Config.UseGrowth,
 	}
 }
 

@@ -200,7 +200,11 @@ func (v *AnalyzingView) Render() string {
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		})
 	} else {
-		footerContent = components.WizardProgressHelp()
+		footerContent = components.FooterHelp([]components.HelpItem{
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescCancel},
+			{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
+		})
 	}
 	footer := lipgloss.NewStyle().
 		Width(v.width).
@@ -239,6 +243,7 @@ func (v *AnalyzingView) GetHelpItems() []components.HelpItem {
 		}
 	}
 	return []components.HelpItem{
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescCancel},
 		{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
 		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}

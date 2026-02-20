@@ -111,14 +111,6 @@ func WizardInputHelp() string {
 	})
 }
 
-// WizardProgressHelp returns help for progress screens
-func WizardProgressHelp() string {
-	return FooterHelp([]HelpItem{
-		{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayGame},
-		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
-}
-
 // WizardResultsHelp returns help for results screens
 func WizardResultsHelp() string {
 	return FooterHelp([]HelpItem{

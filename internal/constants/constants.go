@@ -8,7 +8,7 @@ var (
 
 // URLs
 const (
-	SkeneAuthURL       = "https://skene-cli-demo-9zc3.vercel.app/auth"
+	SkeneAuthURL       = "https://skene-cli-demo.vercel.app/auth"
 	UVDownloadBaseURL  = "https://github.com/astral-sh/uv/releases/latest/download"
 	OllamaDefaultBase  = "http://localhost:11434/v1"
 	LMStudioDefaultBase = "http://localhost:1234/v1"
@@ -57,17 +57,5 @@ var SkenePackages = []PackageMeta{
 		Name:        "Skene Growth",
 		Description: "Tech stack detection, growth features, revenue leakage, growth plans (via uvx)",
 		URL:         "github.com/SkeneTechnologies/skene-growth",
-	},
-	{
-		ID:          "skills",
-		Name:        "Skene Skills",
-		Description: "PLG analysis skills for Claude Code — installed alongside growth",
-		URL:         "github.com/SkeneTechnologies/skene-skills",
-	},
-	{
-		ID:          "cookbook",
-		Name:        "Skene Cookbook",
-		Description: "700+ AI skills for PLG, marketing, security, DevEx — installed alongside growth",
-		URL:         "github.com/SkeneTechnologies/skene-cookbook",
 	},
 }

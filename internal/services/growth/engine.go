@@ -48,9 +48,7 @@ type EngineConfig struct {
 	BaseURL    string
 	ProjectDir string
 	OutputDir  string
-	UseGrowth  bool
-	UseSkills  bool
-	UseCookbook bool
+	UseGrowth bool
 }
 
 // Engine spawns uvx commands to run Skene libraries in the selected repository

@@ -672,38 +672,9 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 
 func (a *App) handleAnalysisConfigKeys(key string) tea.Cmd {
 	switch key {
-	case "left", "h":
-		a.analysisConfigView.HandleLeft()
-	case "right", "l":
-		a.analysisConfigView.HandleRight()
-	case "up", "k":
-		a.analysisConfigView.HandleUp()
-	case "down", "j":
-		a.analysisConfigView.HandleDown()
-	case " ":
-		a.analysisConfigView.HandleSpace()
 	case "enter":
-		if a.analysisConfigView.IsDefaultMode() {
-			btn := a.analysisConfigView.GetButtonLabel()
-			if btn == "Yes" {
-				a.applyAnalysisConfig()
-				return a.startAnalysis()
-			} else {
-				a.analysisConfigView.SetCustomMode()
-			}
-		} else {
-			a.applyAnalysisConfig()
-			return a.startAnalysis()
-		}
-	case "y":
-		if a.analysisConfigView.IsDefaultMode() {
-			a.applyAnalysisConfig()
-			return a.startAnalysis()
-		}
-	case "n":
-		if a.analysisConfigView.IsDefaultMode() {
-			a.analysisConfigView.SetCustomMode()
-		}
+		a.applyAnalysisConfig()
+		return a.startAnalysis()
 	case "esc":
 		a.state = StateProjectDir
 	}

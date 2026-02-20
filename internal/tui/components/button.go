@@ -129,13 +129,3 @@ func interleave(items []string, sep string) []string {
 	return result
 }
 
-// YesNoButtons creates Yes/No button group
-func YesNoButtons(yesActive bool) *ButtonGroup {
-	bg := NewButtonGroup("Yes", "No")
-	if yesActive {
-		bg.SetActiveIndex(0)
-	} else {
-		bg.SetActiveIndex(1)
-	}
-	return bg
-}

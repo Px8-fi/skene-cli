@@ -81,16 +81,6 @@ func FooterHelp(items []HelpItem) string {
 	return strings.Join(parts, styles.HelpSeparator.String())
 }
 
-// WizardHelp returns wizard navigation help
-func WizardHelp() string {
-	return FooterHelp([]HelpItem{
-		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescContinue},
-		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
-		{Key: constants.HelpKeyHelp, Desc: constants.HelpDescHelp},
-		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
-}
-
 // WizardSelectHelp returns help for selection screens
 func WizardSelectHelp() string {
 	return FooterHelp([]HelpItem{

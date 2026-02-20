@@ -182,11 +182,8 @@ const (
 
 // Analysis config view
 const (
-	AnalysisConfigSummary    = "Analysis Summary"
-	AnalysisConfigQuestion   = "Use recommended settings?"
-	AnalysisConfigDefault    = "Default installs and runs all Skene packages via uvx"
-	AnalysisConfigSelectPkgs = "Select packages to include in the analysis:"
-	AnalysisConfigToggleHint = "space toggle  •  enter start analysis"
+	AnalysisConfigSummary   = "Analysis Summary"
+	AnalysisConfigRunButton = "Run Analysis"
 )
 
 // Analyzing view

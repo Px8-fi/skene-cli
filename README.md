@@ -21,7 +21,7 @@ The CLI itself does **not** perform any analysis. It orchestrates `uvx skene-gro
 - Next steps menu — generate plans, build prompts, validate, or re-analyse
 - Cancellable processes — press `Esc` to cancel a running analysis
 - Error handling with retry and go-back
-- Cross-platform — macOS, Linux, Windows
+- Cross-platform — macOS 11+ (Big Sur), Linux, Windows
 - Mini-game while you wait
 
 ## Prerequisites
@@ -39,13 +39,15 @@ make build
 make run
 ```
 
-### Build from Source (requires Go 1.22+)
+### Build from Source (requires Go 1.24+)
+
+Pre-built releases are built with Go 1.25+ and **require macOS 12+**. On **macOS 11 (Big Sur)** you must build from source using **Go 1.24** (Go 1.25 uses macOS 12–only APIs and the binary will not run on Big Sur).
 
 ```bash
 git clone https://github.com/SkeneTechnologies/skene-cli.git
 cd skene-cli
 make install   # download dependencies
-make build
+make build     # on macOS 11, use Go 1.24 for this step
 make run
 ```
 
@@ -127,6 +129,8 @@ make fmt          # format
 make build-all    # build for all platforms
 make release      # package releases
 ```
+
+To produce **macOS 11–compatible** darwin binaries, build darwin with **Go 1.24** (e.g. `make build-darwin` using Go 1.24). Go 1.25+ links a Security.framework API that exists only on macOS 12+.
 
 ## Dependencies
 

@@ -12,6 +12,11 @@ VERSION=v030
 LDFLAGS=-ldflags "-s -w"
 HAS_GO := $(shell which go >/dev/null 2>&1 && echo yes || echo no)
 
+# macOS 11 (Big Sur) support: Go 1.25+ uses Security.framework APIs that require macOS 12.
+# Set MACOSX_DEPLOYMENT_TARGET so darwin binaries are tagged for 11.0 when built on a Mac.
+# For darwin builds that must run on macOS 11, use Go 1.24 (build-darwin checks and warns).
+export MACOSX_DEPLOYMENT_TARGET ?= 11.0
+
 # Default target
 all: build
 
@@ -92,9 +97,15 @@ build-linux:
 	@echo "Building for Linux..."
 	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 ./cmd/skene
 
+# Darwin binaries are macOS 11–compatible only if built with Go 1.24 (run with Go 1.24; Makefile does not switch Go).
+# Go 1.25+ links SecTrustCopyCertificateChain (macOS 12+ only). MACOSX_DEPLOYMENT_TARGET above tags min OS when on Mac.
 build-darwin:
-	@echo "Building for macOS..."
-	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 ./cmd/skene
+	@GOV=$$(go version 2>/dev/null | sed -n 's/.*go\([0-9]*\.[0-9]*\).*/\1/p'); \
+	case "$$GOV" in 1.2[5-9]|1.[3-9]*) \
+		echo "WARNING: Go $$GOV uses macOS 12+ only APIs. For macOS 11 (Big Sur) compatibility, build with Go 1.24.";; \
+	esac; \
+	echo "Building for macOS (min 11.0)..."; \
+	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 ./cmd/skene && \
 	GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 ./cmd/skene
 
 build-windows:

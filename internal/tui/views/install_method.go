@@ -1,6 +1,7 @@
 package views
 
 import (
+	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
 
@@ -34,7 +35,7 @@ func NewInstallMethodView(uvAvailable bool) *InstallMethodView {
 	return &InstallMethodView{
 		options:       options,
 		selectedIndex: 0,
-		header:        components.NewWizardHeader(2, "Install Method"),
+		header:        components.NewTitleHeader(constants.StepNameInstallMethod),
 		uvAvailable:   uvAvailable,
 	}
 }
@@ -179,9 +180,9 @@ func (v *InstallMethodView) renderInfo(width int) string {
 // GetHelpItems returns context-specific help
 func (v *InstallMethodView) GetHelpItems() []components.HelpItem {
 	return []components.HelpItem{
-		{Key: "↑/↓", Desc: "select method"},
-		{Key: "enter", Desc: "confirm"},
-		{Key: "esc", Desc: "go back"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescSelectMethod},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }

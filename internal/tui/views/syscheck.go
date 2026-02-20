@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"skene/internal/constants"
 	"skene/internal/services/syscheck"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
@@ -27,8 +28,8 @@ func NewSysCheckView() *SysCheckView {
 	return &SysCheckView{
 		spinner:  components.NewSpinner(),
 		checking: true,
-		header:   components.NewWizardHeader(1, "System Check"),
-		buttonGroup: components.NewButtonGroup("Continue", "Quit"),
+		header:   components.NewTitleHeader(constants.StepNameSysCheck),
+		buttonGroup: components.NewButtonGroup(constants.ButtonContinue, constants.ButtonQuit),
 	}
 }
 
@@ -104,9 +105,9 @@ func (v *SysCheckView) Render() string {
 		Width(v.width).
 		Align(lipgloss.Center).
 		Render(components.FooterHelp([]components.HelpItem{
-			{Key: "enter", Desc: "continue"},
-			{Key: "esc", Desc: "back"},
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescContinue},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}))
 
 	block := lipgloss.JoinVertical(
@@ -132,13 +133,13 @@ func (v *SysCheckView) Render() string {
 }
 
 func (v *SysCheckView) renderChecks(width int) string {
-	header := styles.SectionHeader.Render("Checking prerequisites...")
+	header := styles.SectionHeader.Render(constants.SysCheckHeader)
 
 	var items []string
 
 	if v.checking {
-		items = append(items, v.spinner.SpinnerWithText("Setting up uvx runtime..."))
-		items = append(items, styles.Muted.Render("  This may take a moment on first run"))
+		items = append(items, v.spinner.SpinnerWithText(constants.SysCheckSettingUp))
+		items = append(items, styles.Muted.Render("  "+constants.SysCheckFirstRun))
 	} else if v.results != nil {
 		items = append(items, renderCheckLine(v.results.UV))
 	}
@@ -186,7 +187,7 @@ func renderCheckLine(result syscheck.CheckResult) string {
 
 func (v *SysCheckView) renderStatus() string {
 	if v.checking {
-		return styles.Muted.Render("Running system checks...")
+		return styles.Muted.Render(constants.SysCheckRunning)
 	}
 
 	if v.results == nil {
@@ -194,7 +195,7 @@ func (v *SysCheckView) renderStatus() string {
 	}
 
 	if v.ideRequestSent {
-		msg := styles.SuccessText.Render("✓ Request sent to IDE!")
+		msg := styles.SuccessText.Render("✓ " + constants.SysCheckIDESent)
 		if v.ideRequestPath != "" {
 			msg += "\n" + styles.Muted.Render(fmt.Sprintf("Details saved to: %s", v.ideRequestPath))
 		}
@@ -202,22 +203,22 @@ func (v *SysCheckView) renderStatus() string {
 	}
 
 	if v.results.AllPassed {
-		return styles.SuccessText.Render("All checks passed! Your system is ready.")
+		return styles.SuccessText.Render(constants.SysCheckAllPassed)
 	}
 
-	return styles.Error.Render("Failed to set up uvx runtime. Check your internet connection and try again.")
+	return styles.Error.Render(constants.SysCheckFailed)
 }
 
 // GetHelpItems returns context-specific help
 func (v *SysCheckView) GetHelpItems() []components.HelpItem {
 	if v.checking {
 		return []components.HelpItem{
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}
 	}
 	return []components.HelpItem{
-		{Key: "enter", Desc: "continue"},
-		{Key: "←/→", Desc: "select option"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescContinue},
+		{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescSelectOption},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }

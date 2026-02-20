@@ -1,6 +1,7 @@
 package views
 
 import (
+	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
 
@@ -38,31 +39,21 @@ func NewAnalysisConfigView(provider, model, projectDir string) *AnalysisConfigVi
 		providerName: provider,
 		modelName:    model,
 		projectDir:   projectDir,
-		header:       components.NewWizardHeader(6, "Analysis Configuration"),
+		header:       components.NewWizardHeader(3, constants.StepNameAnalysisConfig),
 		buttonGroup:  components.YesNoButtons(true),
-		packages: []SkenePackage{
-			{
-				ID:          "growth",
-				Name:        "Skene Growth",
-				Description: "Tech stack detection, growth features, revenue leakage, growth plans (via uvx)",
-				URL:         "github.com/SkeneTechnologies/skene-growth",
-				Enabled:     true,
-			},
-			{
-				ID:          "skills",
-				Name:        "Skene Skills",
-				Description: "PLG analysis skills for Claude Code — installed alongside growth",
-				URL:         "github.com/SkeneTechnologies/skene-skills",
-				Enabled:     true,
-			},
-			{
-				ID:          "cookbook",
-				Name:        "Skene Cookbook",
-				Description: "700+ AI skills for PLG, marketing, security, DevEx — installed alongside growth",
-				URL:         "github.com/SkeneTechnologies/skene-cookbook",
-				Enabled:     true,
-			},
-		},
+		packages: func() []SkenePackage {
+			var pkgs []SkenePackage
+			for _, p := range constants.SkenePackages {
+				pkgs = append(pkgs, SkenePackage{
+					ID:          p.ID,
+					Name:        p.Name,
+					Description: p.Description,
+					URL:         p.URL,
+					Enabled:     true,
+				})
+			}
+			return pkgs
+		}(),
 	}
 }
 
@@ -198,13 +189,13 @@ func (v *AnalysisConfigView) Render() string {
 }
 
 func (v *AnalysisConfigView) renderSummary(width int) string {
-	header := styles.SectionHeader.Render("Analysis Summary")
+	header := styles.SectionHeader.Render(constants.AnalysisConfigSummary)
 
 	rows := []string{
 		styles.Label.Render("Provider:   ") + styles.Body.Render(v.providerName),
 		styles.Label.Render("Model:      ") + styles.Body.Render(v.modelName),
 		styles.Label.Render("Directory:  ") + styles.Body.Render(v.projectDir),
-		styles.Label.Render("Output:     ") + styles.Body.Render("./skene-context/"),
+		styles.Label.Render("Output:     ") + styles.Body.Render(constants.DefaultOutputDir+"/"),
 	}
 
 	content := lipgloss.JoinVertical(
@@ -218,8 +209,8 @@ func (v *AnalysisConfigView) renderSummary(width int) string {
 }
 
 func (v *AnalysisConfigView) renderDefaultQuestion(width int) string {
-	question := styles.Body.Render("Use recommended settings?")
-	desc := styles.Muted.Render("Default installs and runs all Skene packages via uvx")
+	question := styles.Body.Render(constants.AnalysisConfigQuestion)
+	desc := styles.Muted.Render(constants.AnalysisConfigDefault)
 	buttons := v.buttonGroup.Render()
 
 	content := lipgloss.JoinVertical(
@@ -237,7 +228,7 @@ func (v *AnalysisConfigView) renderDefaultQuestion(width int) string {
 }
 
 func (v *AnalysisConfigView) renderCustomOptions(width int) string {
-	header := styles.Body.Render("Select packages to include in the analysis:")
+	header := styles.Body.Render(constants.AnalysisConfigSelectPkgs)
 
 	var pkgItems []string
 	for i, pkg := range v.packages {
@@ -278,7 +269,7 @@ func (v *AnalysisConfigView) renderCustomOptions(width int) string {
 	pkgList := lipgloss.JoinVertical(lipgloss.Left, pkgItems...)
 
 	// Start hint
-	hint := styles.Muted.Render("space toggle  •  enter start analysis")
+	hint := styles.Muted.Render(constants.AnalysisConfigToggleHint)
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -297,15 +288,15 @@ func (v *AnalysisConfigView) renderCustomOptions(width int) string {
 func (v *AnalysisConfigView) GetHelpItems() []components.HelpItem {
 	if v.useDefaults {
 		return []components.HelpItem{
-			{Key: "←/→", Desc: "select option"},
-			{Key: "enter", Desc: "confirm"},
-			{Key: "esc", Desc: "go back"},
+			{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescSelectOption},
+			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
 		}
 	}
 	return []components.HelpItem{
-		{Key: "↑/↓", Desc: "navigate"},
-		{Key: "space", Desc: "toggle option"},
-		{Key: "enter", Desc: "start analysis"},
-		{Key: "esc", Desc: "go back"},
+		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescNavigate},
+		{Key: constants.HelpKeySpace, Desc: constants.HelpDescToggleOption},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescStartAnalysis},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
 	}
 }

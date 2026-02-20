@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"skene/internal/constants"
 	"skene/internal/services/config"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
@@ -23,7 +24,7 @@ func NewModelView(provider *config.Provider) *ModelView {
 	return &ModelView{
 		provider:      provider,
 		selectedIndex: 0,
-		header:        components.NewWizardHeader(3, "Select Model"),
+		header:        components.NewWizardHeader(1, constants.StepNameSelectModel),
 	}
 }
 
@@ -157,9 +158,9 @@ func (v *ModelView) renderModelList(width int) string {
 // GetHelpItems returns context-specific help
 func (v *ModelView) GetHelpItems() []components.HelpItem {
 	return []components.HelpItem{
-		{Key: "↑/↓", Desc: "select model"},
-		{Key: "enter", Desc: "confirm selection"},
-		{Key: "esc", Desc: "go back"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescSelectModel},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirmSelection},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }

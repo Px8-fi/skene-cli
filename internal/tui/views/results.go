@@ -1,9 +1,11 @@
 package views
 
 import (
+	"os"
+	"path/filepath"
+	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
@@ -31,44 +33,41 @@ type ResultsView struct {
 
 // NewResultsView creates a new results view with default placeholder content
 func NewResultsView() *ResultsView {
-	return NewResultsViewWithContent(
-		getResultsGrowthPlanContent(),
-		getResultsManifestContent(),
-		getResultsProductDocsContent(),
-	)
+	return NewResultsViewWithContent("", "", "")
 }
 
-// NewResultsViewWithContent creates a new results view with custom content
-func NewResultsViewWithContent(growthPlan, manifest, productDocs string) *ResultsView {
+// NewResultsViewWithContent creates a new results view with custom content.
+// Parameters: growthPlan (growth-plan.md), manifest (growth-manifest.json),
+// growthTemplate (growth-template.json).
+func NewResultsViewWithContent(growthPlan, manifest, growthTemplate string) *ResultsView {
 	vp := viewport.New(60, 20)
 
 	v := &ResultsView{
-		tabs:      []string{"Growth Plan", "Manifest", "Product Docs"},
+		tabs:      []string{constants.TabGrowthManifest, constants.TabGrowthTemplate, constants.TabGrowthPlan},
 		activeTab: 0,
 		contents:  make(map[string]string),
 		viewport:  vp,
 		focus:     ResultsFocusTabs,
-		header:    components.NewWizardHeader(7, "Analysis Results"),
+		header:    components.NewTitleHeader(constants.StepNameResults),
 	}
 
-	// Set content (use provided or fall back to defaults)
-	if growthPlan != "" {
-		v.contents["Growth Plan"] = growthPlan
-	} else {
-		v.contents["Growth Plan"] = getResultsGrowthPlanContent()
-	}
 	if manifest != "" {
-		v.contents["Manifest"] = manifest
+		v.contents[constants.TabGrowthManifest] = manifest
 	} else {
-		v.contents["Manifest"] = getResultsManifestContent()
+		v.contents[constants.TabGrowthManifest] = constants.PlaceholderGrowthManifest
 	}
-	if productDocs != "" {
-		v.contents["Product Docs"] = productDocs
+	if growthTemplate != "" {
+		v.contents[constants.TabGrowthTemplate] = growthTemplate
 	} else {
-		v.contents["Product Docs"] = getResultsProductDocsContent()
+		v.contents[constants.TabGrowthTemplate] = constants.PlaceholderGrowthTemplate
+	}
+	if growthPlan != "" {
+		v.contents[constants.TabGrowthPlan] = growthPlan
+	} else {
+		v.contents[constants.TabGrowthPlan] = constants.PlaceholderGrowthPlan
 	}
 
-	v.viewport.SetContent(v.contents["Growth Plan"])
+	v.viewport.SetContent(v.contents[constants.TabGrowthManifest])
 
 	return v
 }
@@ -157,7 +156,7 @@ func (v *ResultsView) Render() string {
 	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
 	// Success banner
-	banner := styles.SuccessText.Render("Skene Analysis Complete")
+	banner := styles.SuccessText.Render(constants.ResultsBanner)
 
 	// Tabs
 	tabsView := v.renderTabs()
@@ -165,10 +164,7 @@ func (v *ResultsView) Render() string {
 	// Content
 	contentBox := v.renderContentBox()
 
-	// Action hint
-	actionHint := styles.Accent.Render("Press 'n' for next steps")
-
-	// Footer
+	// Footer with next steps integrated
 	footer := lipgloss.NewStyle().
 		Width(v.width).
 		Align(lipgloss.Center).
@@ -183,8 +179,6 @@ func (v *ResultsView) Render() string {
 		"",
 		tabsView,
 		contentBox,
-		"",
-		actionHint,
 	)
 
 	mainContent := lipgloss.Place(
@@ -231,187 +225,42 @@ func (v *ResultsView) renderContentBox() string {
 func (v *ResultsView) GetHelpItems() []components.HelpItem {
 	if v.focus == ResultsFocusTabs {
 		return []components.HelpItem{
-			{Key: "←/→", Desc: "switch tabs"},
-			{Key: "tab", Desc: "focus content"},
-			{Key: "n", Desc: "next steps"},
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescSwitchTabs},
+			{Key: constants.HelpKeyTab, Desc: constants.HelpDescFocusContent},
+			{Key: constants.HelpKeyN, Desc: constants.HelpDescNextSteps},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}
 	}
 	return []components.HelpItem{
-		{Key: "↑/↓", Desc: "scroll"},
-		{Key: "tab", Desc: "focus tabs"},
-		{Key: "n", Desc: "next steps"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
+		{Key: constants.HelpKeyTab, Desc: constants.HelpDescFocusTabs},
+		{Key: constants.HelpKeyN, Desc: constants.HelpDescNextSteps},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }
 
-func getResultsGrowthPlanContent() string {
-	return strings.TrimSpace(`
-## CONFIDENTIAL ENGINEERING MEMO
-
-Date: 2026-02-09
-Subject: Growth Strategy Analysis
-From: Council of Growth Engineers
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-EXECUTIVE SUMMARY
-
-Your codebase has been analyzed for Product-Led Growth
-opportunities. Below are the key findings and actionable
-recommendations.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. STRIP TO THE GROWTH CORE
-
-The fundamental growth problem is maximizing the number
-of codebases Skene analyzes. Every codebase analyzed is a
-potential source of:
-
-  • New Users — owner and collaborators
-  • New Codebases — related project recommendations
-  • Improved AI — more data to refine analysis
-
-2. SELECTED GROWTH LOOPS
-
-Loop 1: Public Scan Leaderboard
-  Priority: HIGH | Impact: 4.2x user acquisition
-  - Allow users to make scans public
-  - Create competitive leaderboards
-  - Gamify code quality improvements
-
-Loop 2: Collaborative Analysis
-  Priority: HIGH | Impact: 3.1x retention
-  - Team-based scanning features
-  - Shared insights and recommendations
-  - Cross-project pattern detection
-
-Loop 3: AI-Powered Recommendations
-  Priority: MEDIUM | Impact: 2.5x engagement
-  - Suggest related codebases to scan
-  - Identify similar projects
-  - Build a network effect
-
-3. IMPLEMENTATION ROADMAP
-
-Week 1-2: Ship public scan feature
-Week 3-4: Build leaderboard infrastructure
-Week 5-6: Implement sharing and collaboration
-Week 7-8: Launch recommendation engine
-
-4. SUCCESS METRICS
-
-  • Scans per user per week: target 3+
-  • Viral coefficient (K-factor): target 1.2
-  • Time to first collaboration: <48 hours
-  • Cross-project engagement: 35%
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Execute. No meetings.
-`)
+// RefreshContent reloads file content from the given directory
+func (v *ResultsView) RefreshContent(outputDir string) {
+	manifest := loadResultFile(outputDir, constants.GrowthManifestFile)
+	if manifest != "" {
+		v.contents[constants.TabGrowthManifest] = manifest
+	}
+	template := loadResultFile(outputDir, constants.GrowthTemplateFile)
+	if template != "" {
+		v.contents[constants.TabGrowthTemplate] = template
+	}
+	plan := loadResultFile(outputDir, constants.GrowthPlanFile)
+	if plan != "" {
+		v.contents[constants.TabGrowthPlan] = plan
+	}
+	v.updateContent()
 }
 
-func getResultsManifestContent() string {
-	return strings.TrimSpace(`
-SKENE GROWTH MANIFEST v2.0
-Generated: 2026-02-09
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-TECH STACK DETECTION
-
-  Framework:  detected
-  Language:   detected
-  Database:   detected
-  Auth:       detected
-  Deployment: detected
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-CURRENT GROWTH FEATURES
-
-  ✓ User authentication flow
-  ✓ API key management
-  ✓ Configuration system
-  ! No social sharing detected
-  ! No referral system detected
-  ! No usage analytics detected
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-REVENUE LEAKAGE ISSUES
-
-  ⚠ No monetization layer detected
-  ⚠ Missing conversion funnels
-  ⚠ No upsell triggers found
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-GROWTH OPPORTUNITIES
-
-  1. [HIGH] Social sharing for analysis results
-  2. [HIGH] Team collaboration features
-  3. [MEDIUM] Public analysis leaderboard
-  4. [MEDIUM] Integration marketplace
-  5. [LOW] Webhook notifications
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-GENERATED FILES
-
-  ./skene-context/growth-manifest.json
-  ./skene-context/growth-template.json
-  ./skene-context/product-docs.md
-`)
+func loadResultFile(dir, filename string) string {
+	data, err := os.ReadFile(filepath.Join(dir, filename))
+	if err != nil {
+		return ""
+	}
+	return string(data)
 }
 
-func getResultsProductDocsContent() string {
-	return strings.TrimSpace(`
-PRODUCT DOCUMENTATION
-Auto-generated by Skene CLI
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-PRODUCT OVERVIEW
-
-  Tagline: [Auto-detected from codebase]
-  Target Audience: Developers and teams
-  Value Proposition: Growth analysis for code
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-DETECTED FEATURES
-
-  1. Code Analysis Engine
-     Scans codebases for growth patterns
-     and opportunities.
-
-  2. AI-Powered Insights
-     Uses LLM providers to generate growth
-     strategies and recommendations.
-
-  3. Configuration Management
-     Flexible config system supporting
-     multiple providers and models.
-
-  4. Multi-Provider Support
-     Works with OpenAI, Anthropic, Gemini,
-     local models, and custom endpoints.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-GETTING STARTED
-
-  1. Run 'uvx skene-growth analyze .'
-  2. Review growth-manifest.json
-  3. Generate growth plan with 'uvx skene-growth plan'
-  4. Build implementation with 'uvx skene-growth build'
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-For more information:
-  https://github.com/SkeneTechnologies/skene-cli
-`)
-}

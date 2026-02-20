@@ -1,6 +1,7 @@
 package components
 
 import (
+	"skene/internal/constants"
 	"skene/internal/tui/styles"
 	"strings"
 
@@ -24,8 +25,8 @@ type HelpOverlay struct {
 func NewHelpOverlay() *HelpOverlay {
 	return &HelpOverlay{
 		Items: []HelpItem{
-			{Key: "?", Desc: "toggle help"},
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyHelp, Desc: constants.HelpDescToggleHelp},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		},
 		Title:   "Help",
 		Visible: false,
@@ -83,111 +84,111 @@ func FooterHelp(items []HelpItem) string {
 // DefaultFooterHelp returns common footer help
 func DefaultFooterHelp() string {
 	return FooterHelp([]HelpItem{
-		{Key: "?", Desc: "help"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyHelp, Desc: constants.HelpDescHelp},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 }
 
 // IntroHelp returns intro screen help
 func IntroHelp() string {
 	return FooterHelp([]HelpItem{
-		{Key: "?", Desc: "help"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyHelp, Desc: constants.HelpDescHelp},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 }
 
 // ConfigHelp returns config screen help
 func ConfigHelp() string {
 	return FooterHelp([]HelpItem{
-		{Key: "↑/↓", Desc: "navigate"},
-		{Key: "enter", Desc: "select"},
-		{Key: "?", Desc: "help"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescNavigate},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSelect},
+		{Key: constants.HelpKeyHelp, Desc: constants.HelpDescHelp},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 }
 
 // NavHelp returns navigation help
 func NavHelp() string {
 	return FooterHelp([]HelpItem{
-		{Key: "←/→", Desc: "navigate"},
-		{Key: "enter", Desc: "confirm"},
-		{Key: "esc", Desc: "back"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescNavigate},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 }
 
 // InputHelp returns input screen help
 func InputHelp() string {
 	return FooterHelp([]HelpItem{
-		{Key: "enter", Desc: "submit"},
-		{Key: "esc", Desc: "back"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSubmit},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 }
 
 // LoadingHelp returns loading screen help
 func LoadingHelp() string {
 	return FooterHelp([]HelpItem{
-		{Key: "g", Desc: "play game"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayGame},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 }
 
 // DashboardHelp returns dashboard help
 func DashboardHelp() string {
 	return FooterHelp([]HelpItem{
-		{Key: "←/→", Desc: "tabs"},
-		{Key: "↑/↓", Desc: "scroll"},
-		{Key: "tab", Desc: "focus"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescTabs},
+		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
+		{Key: constants.HelpKeyTab, Desc: constants.HelpDescFocus},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 }
 
 // WizardHelp returns wizard navigation help
 func WizardHelp() string {
 	return FooterHelp([]HelpItem{
-		{Key: "enter", Desc: "continue"},
-		{Key: "esc", Desc: "back"},
-		{Key: "?", Desc: "help"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescContinue},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
+		{Key: constants.HelpKeyHelp, Desc: constants.HelpDescHelp},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 }
 
 // WizardSelectHelp returns help for selection screens
 func WizardSelectHelp() string {
 	return FooterHelp([]HelpItem{
-		{Key: "↑/↓", Desc: "navigate"},
-		{Key: "enter", Desc: "select"},
-		{Key: "esc", Desc: "back"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescNavigate},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSelect},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 }
 
 // WizardInputHelp returns help for input screens
 func WizardInputHelp() string {
 	return FooterHelp([]HelpItem{
-		{Key: "enter", Desc: "submit"},
-		{Key: "tab", Desc: "switch focus"},
-		{Key: "esc", Desc: "back"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSubmit},
+		{Key: constants.HelpKeyTab, Desc: constants.HelpDescSwitchFocus},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 }
 
 // WizardProgressHelp returns help for progress screens
 func WizardProgressHelp() string {
 	return FooterHelp([]HelpItem{
-		{Key: "g", Desc: "play game"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayGame},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 }
 
 // WizardResultsHelp returns help for results screens
 func WizardResultsHelp() string {
 	return FooterHelp([]HelpItem{
-		{Key: "←/→", Desc: "tabs"},
-		{Key: "↑/↓", Desc: "scroll"},
-		{Key: "tab", Desc: "focus"},
-		{Key: "n", Desc: "next steps"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescTabs},
+		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
+		{Key: constants.HelpKeyTab, Desc: constants.HelpDescFocus},
+		{Key: constants.HelpKeyN, Desc: constants.HelpDescNextSteps},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 }

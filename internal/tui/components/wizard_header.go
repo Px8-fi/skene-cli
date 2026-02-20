@@ -13,15 +13,12 @@ type WizardStep struct {
 	Name   string
 }
 
-// WizardSteps defines the complete wizard flow
+// WizardSteps defines the user-facing wizard flow
 var WizardSteps = []WizardStep{
-	{Number: 1, Name: "System Check"},
-	{Number: 2, Name: "Install Method"},
-	{Number: 3, Name: "AI Provider"},
-	{Number: 4, Name: "Authentication"},
-	{Number: 5, Name: "Project Setup"},
-	{Number: 6, Name: "Analysis"},
-	{Number: 7, Name: "Results"},
+	{Number: 1, Name: "AI Provider"},
+	{Number: 2, Name: "Authentication"},
+	{Number: 3, Name: "Project Setup"},
+	{Number: 4, Name: "Analysing"},
 }
 
 // WizardHeader renders the wizard progress header
@@ -109,13 +106,10 @@ func renderWizardDots(current, total int) string {
 	var dots string
 	for i := 1; i <= total; i++ {
 		if i < current {
-			// Completed: filled amber dot
 			dots += styles.Accent.Render("●")
 		} else if i == current {
-			// Active: outlined amber dot
-			dots += styles.Accent.Render("◉")
+			dots += styles.Accent.Render("○")
 		} else {
-			// Future: muted empty dot
 			dots += styles.Muted.Render("○")
 		}
 		if i < total {

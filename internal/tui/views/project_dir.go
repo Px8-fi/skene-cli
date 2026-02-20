@@ -3,6 +3,7 @@ package views
 import (
 	"os"
 	"path/filepath"
+	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
 
@@ -54,7 +55,7 @@ func NewProjectDirView() *ProjectDirView {
 	ti.Width = 50
 	ti.Focus()
 
-	bg := components.NewButtonGroup("Use Current", "Browse", "Continue")
+	bg := components.NewButtonGroup(constants.ButtonUseCurrent, constants.ButtonBrowse, constants.ButtonContinue)
 	bg.SetActiveIndex(-1)
 
 	v := &ProjectDirView{
@@ -63,7 +64,7 @@ func NewProjectDirView() *ProjectDirView {
 		inputFocus:       true,
 		currentDir:       cwd,
 		isValid:          true,
-		header:           components.NewWizardHeader(5, "Project Directory"),
+		header:           components.NewWizardHeader(3, constants.StepNameProjectDir),
 		existingAnalysis: ChoiceNotAsked,
 	}
 
@@ -150,7 +151,7 @@ func (v *ProjectDirView) StartBrowsing() {
 		browserHeight = 18
 	}
 	v.dirBrowser.SetHeight(browserHeight)
-	v.browseButtons = components.NewButtonGroup("Select This Directory", "Cancel")
+	v.browseButtons = components.NewButtonGroup(constants.ButtonSelectDir, constants.ButtonCancel)
 	v.browseButtons.SetActiveIndex(-1)
 	v.browseFocusList = true
 	v.browsing = true
@@ -270,13 +271,13 @@ func (v *ProjectDirView) HasWarning() bool {
 // and transitions to the choice prompt if found
 func (v *ProjectDirView) CheckForExistingAnalysis() bool {
 	path := v.GetProjectDir()
-	contextDir := filepath.Join(path, "skene-context")
+	contextDir := filepath.Join(path, constants.OutputDirName)
 
 	info, err := os.Stat(contextDir)
 	if err == nil && info.IsDir() {
 		v.hasSkeneContext = true
 		v.existingAnalysis = ChoiceAsking
-		v.existingButtonGroup = components.NewButtonGroup("View Analysis", "Rerun Analysis")
+		v.existingButtonGroup = components.NewButtonGroup(constants.ProjectDirViewAnalysis, constants.ProjectDirRerunAnalysis)
 		v.textInput.Blur()
 		v.inputFocus = false
 		return true
@@ -327,7 +328,7 @@ func (v *ProjectDirView) validatePath() {
 	info, err := os.Stat(path)
 	if err != nil {
 		v.isValid = false
-		v.validMsg = "Directory not found"
+		v.validMsg = constants.ProjectDirNotFound
 		v.warningMsg = ""
 		v.hasSkeneContext = false
 		return
@@ -335,7 +336,7 @@ func (v *ProjectDirView) validatePath() {
 
 	if !info.IsDir() {
 		v.isValid = false
-		v.validMsg = "Path is not a directory"
+		v.validMsg = constants.ProjectDirNotADir
 		v.warningMsg = ""
 		v.hasSkeneContext = false
 		return
@@ -345,7 +346,7 @@ func (v *ProjectDirView) validatePath() {
 	v.validMsg = ""
 
 	// Check for existing skene-context
-	contextDir := filepath.Join(path, "skene-context")
+	contextDir := filepath.Join(path, constants.OutputDirName)
 	if info, err := os.Stat(contextDir); err == nil && info.IsDir() {
 		v.hasSkeneContext = true
 	} else {
@@ -367,7 +368,7 @@ func (v *ProjectDirView) validatePath() {
 	}
 
 	if !hasProject {
-		v.warningMsg = "No recognizable project structure detected. Analysis may be limited."
+		v.warningMsg = constants.ProjectDirNoProject
 	} else {
 		v.warningMsg = ""
 	}
@@ -394,6 +395,16 @@ func (v *ProjectDirView) Render() string {
 			Align(lipgloss.Center).
 			Render(v.browseButtons.Render())
 
+		footer := lipgloss.NewStyle().
+			Width(v.width).
+			Align(lipgloss.Center).
+			Render(components.FooterHelp([]components.HelpItem{
+				{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescNavigate},
+				{Key: constants.HelpKeyEnter, Desc: constants.HelpDescOpenFolder},
+				{Key: constants.HelpKeyTab, Desc: constants.HelpDescSwitchFocus},
+				{Key: constants.HelpKeyEsc, Desc: constants.HelpDescCancel},
+			}))
+
 		content := lipgloss.JoinVertical(
 			lipgloss.Left,
 			wizHeader,
@@ -413,7 +424,7 @@ func (v *ProjectDirView) Render() string {
 			padded,
 		)
 
-		return centered
+		return centered + "\n" + footer
 	}
 
 	// Existing analysis choice view
@@ -460,10 +471,10 @@ func (v *ProjectDirView) Render() string {
 }
 
 func (v *ProjectDirView) renderExistingAnalysisChoice(wizHeader string, width int) string {
-	header := styles.SectionHeader.Render("Existing Analysis Detected")
-	msg := styles.Body.Render("A previous Skene Growth analysis was found in this project.")
-	path := styles.Muted.Render("Found: " + filepath.Join(v.GetProjectDir(), "skene-context") + "/")
-	question := styles.Accent.Render("What would you like to do?")
+	header := styles.SectionHeader.Render(constants.ProjectDirExistingHeader)
+	msg := styles.Body.Render(constants.ProjectDirExistingMsg)
+	path := styles.Muted.Render("Found: " + filepath.Join(v.GetProjectDir(), constants.OutputDirName) + "/")
+	question := styles.Accent.Render(constants.ProjectDirExistingQ)
 
 	buttons := lipgloss.NewStyle().
 		Width(width).
@@ -486,10 +497,10 @@ func (v *ProjectDirView) renderExistingAnalysisChoice(wizHeader string, width in
 		Width(v.width).
 		Align(lipgloss.Center).
 		Render(components.FooterHelp([]components.HelpItem{
-			{Key: "←/→", Desc: "select"},
-			{Key: "enter", Desc: "confirm"},
-			{Key: "esc", Desc: "back"},
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescSelect},
+			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}))
 
 	content := lipgloss.JoinVertical(
@@ -515,8 +526,8 @@ func (v *ProjectDirView) renderExistingAnalysisChoice(wizHeader string, width in
 }
 
 func (v *ProjectDirView) renderDirSection(width int) string {
-	header := styles.SectionHeader.Render("Select project to analyze")
-	subtitle := styles.Muted.Render("Enter the path to your project's root directory")
+	header := styles.SectionHeader.Render(constants.ProjectDirHeader)
+	subtitle := styles.Muted.Render(constants.ProjectDirSubtitle)
 
 	// Directory input
 	dirLabel := styles.Label.Render("Directory:")
@@ -529,9 +540,9 @@ func (v *ProjectDirView) renderDirSection(width int) string {
 	} else if v.warningMsg != "" {
 		validationLine = lipgloss.NewStyle().Foreground(styles.Warning).Render("! " + v.warningMsg)
 	} else if v.isValid && v.hasSkeneContext {
-		validationLine = styles.SuccessText.Render("Valid project directory (existing analysis found)")
+		validationLine = styles.SuccessText.Render(constants.ProjectDirValidExisting)
 	} else if v.isValid {
-		validationLine = styles.SuccessText.Render("Valid project directory")
+		validationLine = styles.SuccessText.Render(constants.ProjectDirValid)
 	}
 
 	content := lipgloss.JoinVertical(
@@ -552,16 +563,16 @@ func (v *ProjectDirView) renderDirSection(width int) string {
 func (v *ProjectDirView) GetHelpItems() []components.HelpItem {
 	if v.existingAnalysis == ChoiceAsking {
 		return []components.HelpItem{
-			{Key: "←/→", Desc: "select option"},
-			{Key: "enter", Desc: "confirm"},
-			{Key: "esc", Desc: "go back"},
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescSelectOption},
+			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}
 	}
 	return []components.HelpItem{
-		{Key: "enter", Desc: "confirm"},
-		{Key: "tab", Desc: "switch focus"},
-		{Key: "esc", Desc: "go back"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
+		{Key: constants.HelpKeyTab, Desc: constants.HelpDescSwitchFocus},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }

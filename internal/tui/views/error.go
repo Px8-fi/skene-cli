@@ -1,6 +1,7 @@
 package views
 
 import (
+	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
 
@@ -161,10 +162,10 @@ func (v *ErrorView) Render() string {
 		Width(v.width).
 		Align(lipgloss.Center).
 		Render(components.FooterHelp([]components.HelpItem{
-			{Key: "←/→", Desc: "select"},
-			{Key: "enter", Desc: "confirm"},
-			{Key: "esc", Desc: "go back"},
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescSelect},
+			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}))
 
 	// Combine all sections
@@ -191,10 +192,10 @@ func (v *ErrorView) Render() string {
 // GetHelpItems returns context-specific help
 func (v *ErrorView) GetHelpItems() []components.HelpItem {
 	return []components.HelpItem{
-		{Key: "←/→", Desc: "select option"},
-		{Key: "enter", Desc: "confirm"},
-		{Key: "esc", Desc: "go back"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescSelectOption},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }
 

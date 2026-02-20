@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
 	"strings"
@@ -23,7 +24,6 @@ type InstallingView struct {
 	width       int
 	height      int
 	tasks       []InstallTask
-	elapsedTime float64
 	header      *components.WizardHeader
 	spinner     *components.Spinner
 	failed      bool
@@ -36,7 +36,7 @@ func NewInstallingView(method string) *InstallingView {
 
 	return &InstallingView{
 		tasks:   tasks,
-		header:  components.NewWizardHeader(2, "Installing"),
+		header:  components.NewTitleHeader(constants.InstallingTitle),
 		spinner: components.NewSpinner(),
 	}
 }
@@ -46,11 +46,6 @@ func (v *InstallingView) SetSize(width, height int) {
 	v.width = width
 	v.height = height
 	v.header.SetWidth(width)
-}
-
-// SetElapsedTime sets the elapsed time
-func (v *InstallingView) SetElapsedTime(t float64) {
-	v.elapsedTime = t
 }
 
 // TickSpinner advances spinner animation
@@ -125,9 +120,6 @@ func (v *InstallingView) Render() string {
 	// Progress section
 	progressSection := v.renderProgress(sectionWidth)
 
-	// Elapsed time
-	elapsed := styles.Muted.Render(fmt.Sprintf("Elapsed: %.1fs", v.elapsedTime))
-
 	// Footer
 	footer := lipgloss.NewStyle().
 		Width(v.width).
@@ -142,8 +134,6 @@ func (v *InstallingView) Render() string {
 		installTitle,
 		"",
 		progressSection,
-		"",
-		elapsed,
 	)
 
 	padded := lipgloss.NewStyle().PaddingTop(2).Render(content)
@@ -229,12 +219,12 @@ func (v *InstallingView) renderProgress(width int) string {
 func (v *InstallingView) GetHelpItems() []components.HelpItem {
 	if v.failed {
 		return []components.HelpItem{
-			{Key: "r", Desc: "retry"},
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyR, Desc: constants.HelpDescRetry},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}
 	}
 	return []components.HelpItem{
-		{Key: "g", Desc: "play mini game"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }

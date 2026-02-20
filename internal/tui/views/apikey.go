@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"skene/internal/constants"
 	"skene/internal/services/config"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
@@ -49,7 +50,7 @@ func NewAPIKeyView(provider *config.Provider, model *config.Model) *APIKeyView {
 		provider:     provider,
 		model:        model,
 		textInput:    ti,
-		header:       components.NewWizardHeader(4, "Authentication"),
+		header:       components.NewWizardHeader(2, constants.StepNameAuthentication),
 		spinner:      components.NewSpinner(),
 		baseURLInput: urlInput,
 		showBaseURL:  showBaseURL,
@@ -142,33 +143,32 @@ func (v *APIKeyView) Validate() bool {
 		switch v.provider.ID {
 		case "openai":
 			if !strings.HasPrefix(key, "sk-") || len(key) < 20 {
-				v.error = "OpenAI keys start with 'sk-' and are at least 20 characters"
+				v.error = constants.OpenAIKeyFormat
 				return false
 			}
 		case "anthropic":
 			if !strings.HasPrefix(key, "sk-ant-") && len(key) < 20 {
-				v.error = "Invalid Anthropic API key format"
+				v.error = constants.AnthropicKeyFormat
 				return false
 			}
 		case "gemini":
 			if len(key) < 10 {
-				v.error = "API key is too short"
+				v.error = constants.APIKeyTooShort
 				return false
 			}
 		default:
 			if len(key) < 8 {
-				v.error = "API key is too short"
+				v.error = constants.APIKeyTooShort
 				return false
 			}
 		}
 	} else if len(key) < 8 {
-		v.error = "API key is too short"
+		v.error = constants.APIKeyTooShort
 		return false
 	}
 
-	// Check base URL for generic providers
 	if v.showBaseURL && v.baseURLInput.Value() == "" {
-		v.error = "Base URL is required for generic providers"
+		v.error = constants.APIKeyBaseURLRequired
 		return false
 	}
 
@@ -230,7 +230,7 @@ func (v *APIKeyView) renderContent(width int) string {
 		modelName = v.model.Name
 	}
 
-	header := styles.SectionHeader.Render("Enter API Credentials")
+	header := styles.SectionHeader.Render(constants.APIKeyHeader)
 
 	// Provider/model info
 	infoRows := []string{
@@ -245,13 +245,13 @@ func (v *APIKeyView) renderContent(width int) string {
 	if v.provider != nil {
 		switch v.provider.ID {
 		case "openai":
-			urlHint = "Get key: https://platform.openai.com/api-keys"
+			urlHint = "Get key: " + constants.OpenAIKeyURL
 		case "anthropic":
-			urlHint = "Get key: https://platform.claude.com/settings/keys"
+			urlHint = "Get key: " + constants.AnthropicKeyURL
 		case "gemini":
-			urlHint = "Get key: https://aistudio.google.com/apikey"
+			urlHint = "Get key: " + constants.GeminiKeyURL
 		case "skene":
-			urlHint = "Get key: https://www.skene.ai/login"
+			urlHint = "Get key: " + constants.SkeneKeyURL
 		}
 	}
 
@@ -280,7 +280,7 @@ func (v *APIKeyView) renderContent(width int) string {
 	// Validating state
 	if v.validating {
 		elements = append(elements, "")
-		elements = append(elements, v.spinner.SpinnerWithText("Validating API key..."))
+		elements = append(elements, v.spinner.SpinnerWithText(constants.APIKeyValidating))
 	}
 
 	// Error message
@@ -295,7 +295,7 @@ func (v *APIKeyView) renderContent(width int) string {
 	// Validated message
 	if v.validated {
 		elements = append(elements, "")
-		elements = append(elements, styles.SuccessText.Render("✓ API key validated"))
+		elements = append(elements, styles.SuccessText.Render("✓ "+constants.APIKeyValidated))
 	}
 
 	content := lipgloss.JoinVertical(lipgloss.Left, elements...)
@@ -306,15 +306,15 @@ func (v *APIKeyView) renderContent(width int) string {
 func (v *APIKeyView) GetHelpItems() []components.HelpItem {
 	if v.showBaseURL {
 		return []components.HelpItem{
-			{Key: "enter", Desc: "submit"},
-			{Key: "tab", Desc: "switch field"},
-			{Key: "esc", Desc: "go back"},
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSubmit},
+			{Key: constants.HelpKeyTab, Desc: constants.HelpDescSwitchField},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}
 	}
 	return []components.HelpItem{
-		{Key: "enter", Desc: "submit"},
-		{Key: "esc", Desc: "go back"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSubmit},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }

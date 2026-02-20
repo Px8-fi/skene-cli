@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"skene/internal/constants"
 )
 
 // Config represents the skene-growth configuration
@@ -33,10 +35,10 @@ func NewManager(projectDir string) *Manager {
 	homeDir, _ := os.UserHomeDir()
 
 	return &Manager{
-		ProjectConfigPath: filepath.Join(projectDir, ".skene.config"),
-		UserConfigPath:    filepath.Join(homeDir, ".config", "skene", "config"),
+		ProjectConfigPath: filepath.Join(projectDir, constants.ProjectConfigFile),
+		UserConfigPath:    filepath.Join(homeDir, constants.UserConfigDir, constants.UserConfigFile),
 		Config: &Config{
-			OutputDir:   "./skene-context",
+			OutputDir:   constants.DefaultOutputDir,
 			Verbose:     true,
 			UseGrowth:   true,
 			UseSkills:   true,
@@ -238,7 +240,7 @@ func GetProviders() []Provider {
 			Name:        "Skene (Recommended)",
 			Description: "Built-in LLM optimized for growth analysis",
 			RequiresKey: true,
-			AuthURL:     "https://skene-cli-demo-9zc3.vercel.app/auth",
+			AuthURL:     constants.SkeneAuthURL,
 			Models: []Model{
 				{ID: "skene-growth-v1", Name: "skene-growth-v1", Description: "Growth analysis model"},
 			},
@@ -282,7 +284,7 @@ func GetProviders() []Provider {
 			Description: "Run models locally with Ollama",
 			RequiresKey: false,
 			IsLocal:     true,
-			DefaultBase: "http://localhost:11434/v1",
+			DefaultBase: constants.OllamaDefaultBase,
 			Models: []Model{
 				{ID: "llama3.3", Name: "llama3.3", Description: "Meta's Llama 3.3"},
 				{ID: "mistral", Name: "mistral", Description: "Mistral 7B"},
@@ -296,7 +298,7 @@ func GetProviders() []Provider {
 			Description: "Run models locally with LM Studio",
 			RequiresKey: false,
 			IsLocal:     true,
-			DefaultBase: "http://localhost:1234/v1",
+			DefaultBase: constants.LMStudioDefaultBase,
 			Models: []Model{
 				{ID: "auto", Name: "Currently loaded model", Description: "Uses whatever model is loaded in LM Studio"},
 			},

@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-)
 
-const downloadBaseURL = "https://github.com/astral-sh/uv/releases/latest/download"
+	"skene/internal/constants"
+)
 
 // Resolve returns the absolute path to a working uvx binary.
 // It checks: (1) system PATH, (2) ~/.skene/bin/ cache, (3) auto-downloads.
@@ -45,7 +45,7 @@ func cacheDirectory() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".skene", "bin"), nil
+	return filepath.Join(home, constants.SkeneCacheDir, constants.SkeneCacheBinDir), nil
 }
 
 func uvxBinaryName() string {
@@ -75,7 +75,7 @@ func downloadUV(cacheDir string) error {
 		return err
 	}
 
-	url := downloadBaseURL + "/" + archive
+	url := constants.UVDownloadBaseURL + "/" + archive
 
 	resp, err := http.Get(url)
 	if err != nil {

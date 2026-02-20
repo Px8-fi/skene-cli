@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"skene/internal/constants"
 	"skene/internal/services/uvresolver"
 )
 
@@ -33,10 +34,10 @@ type PhaseUpdate struct {
 
 // AnalysisResult holds the complete analysis output
 type AnalysisResult struct {
-	GrowthPlan  string
-	Manifest    string
-	ProductDocs string
-	Error       error
+	GrowthPlan     string
+	Manifest       string
+	GrowthTemplate string
+	Error          error
 }
 
 // EngineConfig holds the configuration passed to uvx commands
@@ -72,7 +73,7 @@ func (e *Engine) Run(ctx context.Context) *AnalysisResult {
 
 	e.sendUpdate(PhaseScanCodebase, 0.0, "Starting analysis via uvx skene-growth...")
 
-	args := []string{"skene-growth", "analyze", "."}
+	args := []string{constants.GrowthPackageName, "analyze", "."}
 	args = append(args, e.buildCommonFlags()...)
 
 	if err := e.runUVX(ctx, args); err != nil {
@@ -83,12 +84,9 @@ func (e *Engine) Run(ctx context.Context) *AnalysisResult {
 	e.sendUpdate(PhaseGenerateDocs, 1.0, "Analysis complete")
 
 	outputDir := e.resolveOutputDir()
-	result.GrowthPlan = loadFileContent(filepath.Join(outputDir, "growth-plan.md"))
-	if result.GrowthPlan == "" {
-		result.GrowthPlan = loadFileContent(filepath.Join(outputDir, "growth-template.json"))
-	}
-	result.Manifest = loadFileContent(filepath.Join(outputDir, "growth-manifest.json"))
-	result.ProductDocs = loadFileContent(filepath.Join(outputDir, "product-docs.md"))
+	result.GrowthPlan = loadFileContent(filepath.Join(outputDir, constants.GrowthPlanFile))
+	result.Manifest = loadFileContent(filepath.Join(outputDir, constants.GrowthManifestFile))
+	result.GrowthTemplate = loadFileContent(filepath.Join(outputDir, constants.GrowthTemplateFile))
 
 	return result
 }
@@ -97,7 +95,7 @@ func (e *Engine) Run(ctx context.Context) *AnalysisResult {
 func (e *Engine) GeneratePlan() *AnalysisResult {
 	result := &AnalysisResult{}
 
-	args := []string{"skene-growth", "plan"}
+	args := []string{constants.GrowthPackageName, "plan"}
 	args = append(args, e.buildCommonFlags()...)
 
 	if err := e.runUVX(context.Background(), args); err != nil {
@@ -106,7 +104,7 @@ func (e *Engine) GeneratePlan() *AnalysisResult {
 	}
 
 	outputDir := e.resolveOutputDir()
-	result.GrowthPlan = loadFileContent(filepath.Join(outputDir, "growth-plan.md"))
+	result.GrowthPlan = loadFileContent(filepath.Join(outputDir, constants.GrowthPlanFile))
 	return result
 }
 
@@ -114,7 +112,7 @@ func (e *Engine) GeneratePlan() *AnalysisResult {
 func (e *Engine) GenerateBuild() *AnalysisResult {
 	result := &AnalysisResult{}
 
-	args := []string{"skene-growth", "build"}
+	args := []string{constants.GrowthPackageName, "build"}
 	args = append(args, e.buildCommonFlags()...)
 
 	if err := e.runUVX(context.Background(), args); err != nil {
@@ -123,7 +121,7 @@ func (e *Engine) GenerateBuild() *AnalysisResult {
 	}
 
 	outputDir := e.resolveOutputDir()
-	result.GrowthPlan = loadFileContent(filepath.Join(outputDir, "implementation-prompt.md"))
+	result.GrowthPlan = loadFileContent(filepath.Join(outputDir, constants.ImplementationPromptFile))
 	return result
 }
 
@@ -131,8 +129,8 @@ func (e *Engine) GenerateBuild() *AnalysisResult {
 func (e *Engine) ValidateManifest() *AnalysisResult {
 	result := &AnalysisResult{}
 
-	manifestPath := filepath.Join(e.resolveOutputDir(), "growth-manifest.json")
-	args := []string{"skene-growth", "validate", manifestPath}
+	manifestPath := filepath.Join(e.resolveOutputDir(), constants.GrowthManifestFile)
+	args := []string{constants.GrowthPackageName, "validate", manifestPath}
 
 	if err := e.runUVX(context.Background(), args); err != nil {
 		result.Error = fmt.Errorf("validation failed: %w", err)
@@ -228,7 +226,7 @@ func (e *Engine) resolveOutputDir() string {
 		}
 		return filepath.Join(e.config.ProjectDir, e.config.OutputDir)
 	}
-	return filepath.Join(e.config.ProjectDir, "skene-context")
+	return filepath.Join(e.config.ProjectDir, constants.OutputDirName)
 }
 
 func (e *Engine) sendUpdate(phase AnalysisPhase, progress float64, message string) {

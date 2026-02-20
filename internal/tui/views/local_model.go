@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
 
@@ -36,9 +37,9 @@ func NewLocalModelView(providerName string) *LocalModelView {
 	var baseURL string
 	switch providerName {
 	case "ollama":
-		baseURL = "http://localhost:11434/v1"
+		baseURL = constants.OllamaDefaultBase
 	case "lmstudio":
-		baseURL = "http://localhost:1234/v1"
+		baseURL = constants.LMStudioDefaultBase
 	}
 
 	return &LocalModelView{
@@ -46,7 +47,7 @@ func NewLocalModelView(providerName string) *LocalModelView {
 		providerName: providerName,
 		baseURL:      baseURL,
 		spinner:      components.NewSpinner(),
-		header:       components.NewWizardHeader(4, "Local Model Setup"),
+		header:       components.NewWizardHeader(2, constants.StepNameLocalModelSetup),
 	}
 }
 
@@ -190,7 +191,7 @@ func (v *LocalModelView) renderDetecting(width int) string {
 }
 
 func (v *LocalModelView) renderModelList(width int) string {
-	header := styles.SectionHeader.Render("Select a local model")
+	header := styles.SectionHeader.Render(constants.LocalModelSelectHeader)
 
 	var items []string
 	for i, model := range v.models {
@@ -249,7 +250,7 @@ func (v *LocalModelView) renderNotFound(width int) string {
 	guideHeader := styles.SectionHeader.Render("Setup Guide")
 	guide := styles.Body.Render(installGuide)
 
-	retryHint := styles.Accent.Render("Press 'r' to retry detection or 'esc' to go back")
+	retryHint := styles.Accent.Render(constants.LocalModelRetryHint)
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
@@ -271,20 +272,20 @@ func (v *LocalModelView) GetHelpItems() []components.HelpItem {
 	switch v.status {
 	case LocalModelDetecting:
 		return []components.HelpItem{
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}
 	case LocalModelNotFound:
 		return []components.HelpItem{
-			{Key: "r", Desc: "retry detection"},
-			{Key: "esc", Desc: "go back"},
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyR, Desc: constants.HelpDescRetryDetection},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}
 	default:
 		return []components.HelpItem{
-			{Key: "↑/↓", Desc: "select model"},
-			{Key: "enter", Desc: "confirm"},
-			{Key: "esc", Desc: "go back"},
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescSelectModel},
+			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}
 	}
 }

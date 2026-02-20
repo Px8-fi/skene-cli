@@ -108,17 +108,40 @@ func (t *TerminalOutput) Render(width int) string {
 	}
 
 	var displayLines []string
-	lineStyle := lipgloss.NewStyle().
-		Foreground(styles.LightGray).
+
+	defaultStyle := lipgloss.NewStyle().
+		Foreground(styles.Cream).
+		MaxWidth(contentWidth)
+	errorStyle := lipgloss.NewStyle().
+		Foreground(styles.Coral).
+		MaxWidth(contentWidth)
+	successStyle := lipgloss.NewStyle().
+		Foreground(styles.Success).
+		MaxWidth(contentWidth)
+	warningStyle := lipgloss.NewStyle().
+		Foreground(styles.Warning).
 		MaxWidth(contentWidth)
 
 	for i := startIdx; i < len(t.lines); i++ {
 		line := t.lines[i]
-		// Truncate long lines
 		if len(line) > contentWidth {
 			line = line[:contentWidth-1] + "~"
 		}
-		displayLines = append(displayLines, lineStyle.Render(line))
+
+		upper := strings.ToUpper(line)
+		var styled string
+		if strings.Contains(upper, "ERROR") || strings.Contains(upper, "FAILED") ||
+			strings.Contains(upper, "TRACEBACK") || strings.Contains(upper, "EXCEPTION") {
+			styled = errorStyle.Render(line)
+		} else if strings.Contains(line, "✓") || strings.Contains(upper, "SUCCESS") ||
+			strings.Contains(upper, "COMPLETE") || strings.Contains(upper, "DONE") {
+			styled = successStyle.Render(line)
+		} else if strings.Contains(upper, "WARNING") || strings.Contains(upper, "WARN") {
+			styled = warningStyle.Render(line)
+		} else {
+			styled = defaultStyle.Render(line)
+		}
+		displayLines = append(displayLines, styled)
 	}
 
 	// Pad with empty lines if not enough output yet

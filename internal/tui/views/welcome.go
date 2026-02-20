@@ -2,6 +2,7 @@ package views
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
 
@@ -62,20 +63,20 @@ func (v *WelcomeView) Render() string {
 	logo := v.anim.View()
 
 	// Subtitle
-	subtitle := center.Render(styles.Subtitle.Render("Product-Led Growth analysis for your codebase"))
+	subtitle := center.Render(styles.Subtitle.Render(constants.WelcomeSubtitle))
 
 	// Call to action
-	enterKey := styles.Accent.Bold(true).Render(">ENTER<")
+	enterKey := styles.Accent.Bold(true).Render(constants.WelcomeCTA)
 	cta := center.Render(enterKey)
 
 	// Version info
-	version := center.Render(styles.Muted.Render("v0.3.0 • github.com/SkeneTechnologies/skene-cli"))
+	version := center.Render(styles.Muted.Render(constants.Version + " • " + constants.Repository))
 
 	// Footer help
 	footer := components.FooterHelp([]components.HelpItem{
-		{Key: "enter", Desc: "start"},
-		{Key: "?", Desc: "help"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescStart},
+		{Key: constants.HelpKeyHelp, Desc: constants.HelpDescHelp},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 
 	// Combine elements
@@ -91,13 +92,12 @@ func (v *WelcomeView) Render() string {
 		version,
 	)
 
-	// Center in viewport
 	centered := lipgloss.Place(
 		v.width,
 		v.height-3,
 		lipgloss.Center,
-		lipgloss.Center,
-		content,
+		lipgloss.Top,
+		lipgloss.NewStyle().PaddingTop(2).Render(content),
 	)
 
 	// Footer pinned at bottom
@@ -113,8 +113,8 @@ func (v *WelcomeView) Render() string {
 // GetHelpItems returns context-specific help
 func (v *WelcomeView) GetHelpItems() []components.HelpItem {
 	return []components.HelpItem{
-		{Key: "enter", Desc: "start"},
-		{Key: "?", Desc: "toggle help"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescStart},
+		{Key: constants.HelpKeyHelp, Desc: constants.HelpDescToggleHelp},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }

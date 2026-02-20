@@ -1,10 +1,9 @@
 package views
 
 import (
-	"fmt"
+	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
-	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 )
@@ -23,30 +22,29 @@ type AnalyzingView struct {
 	width       int
 	height      int
 	phases      []AnalysisPhase
-	elapsedTime float64
 	header      *components.WizardHeader
 	spinner     *components.Spinner
 	terminal    *components.TerminalOutput
 	failed      bool
 	done        bool
 	failMessage string
-	currentIdx  int
+	currentIdx int
 }
 
 // NewAnalyzingView creates a new analysis progress view
 func NewAnalyzingView() *AnalyzingView {
 	phases := []AnalysisPhase{
-		{Name: "Scanning codebase", Active: true},
-		{Name: "Detecting product features", Active: false},
-		{Name: "Growth loop analysis", Active: false},
-		{Name: "Monetisation analysis", Active: false},
-		{Name: "Opportunity modelling", Active: false},
-		{Name: "Generating manifests & docs", Active: false},
+		{Name: constants.PhaseScanCodebase, Active: true},
+		{Name: constants.PhaseDetectFeatures, Active: false},
+		{Name: constants.PhaseGrowthLoops, Active: false},
+		{Name: constants.PhaseMonetisation, Active: false},
+		{Name: constants.PhaseOpportunities, Active: false},
+		{Name: constants.PhaseGenerateDocs, Active: false},
 	}
 
 	return &AnalyzingView{
 		phases:   phases,
-		header:   components.NewWizardHeader(6, "Running Skene Growth Analysis"),
+		header:   components.NewTitleHeader(constants.StepNameAnalyzing),
 		spinner:  components.NewSpinner(),
 		terminal: components.NewTerminalOutput(14, 300),
 	}
@@ -78,11 +76,6 @@ func (v *AnalyzingView) SetSize(width, height int) {
 	v.terminal.SetSize(width, termHeight)
 }
 
-// SetElapsedTime updates elapsed time
-func (v *AnalyzingView) SetElapsedTime(t float64) {
-	v.elapsedTime = t
-}
-
 // TickSpinner advances spinner animation
 func (v *AnalyzingView) TickSpinner() {
 	v.spinner.Tick()
@@ -112,7 +105,7 @@ func (v *AnalyzingView) UpdatePhase(index int, progress float64, message string)
 // SetDone marks the command as successfully completed
 func (v *AnalyzingView) SetDone() {
 	v.done = true
-	v.terminal.AddLine("✓ Done")
+	v.terminal.AddLine("✓ " + constants.AnalyzingDone)
 }
 
 // SetCommandFailed marks the view as failed with the error visible in terminal
@@ -157,26 +150,6 @@ func (v *AnalyzingView) HasFailed() bool {
 	return v.failed
 }
 
-// GetOverallProgress returns overall progress 0.0-1.0
-func (v *AnalyzingView) GetOverallProgress() float64 {
-	if len(v.phases) == 0 {
-		if v.done {
-			return 1.0
-		}
-		if v.failed {
-			return 0.0
-		}
-		return 0.5
-	}
-	done := 0
-	for _, p := range v.phases {
-		if p.Done {
-			done++
-		}
-	}
-	return float64(done) / float64(len(v.phases))
-}
-
 // Render the analyzing view
 func (v *AnalyzingView) Render() string {
 	sectionWidth := v.width - 20
@@ -193,14 +166,14 @@ func (v *AnalyzingView) Render() string {
 	// Current phase status
 	var statusLine string
 	if v.failed {
-		statusLine = styles.Error.Render("✗ Failed")
+		statusLine = styles.Error.Render("✗ " + constants.AnalyzingFailed)
 		if v.failMessage != "" {
 			statusLine += "\n" + styles.Muted.Render("  "+v.failMessage)
 		}
 	} else if v.done {
-		statusLine = styles.SuccessText.Render("✓ Complete")
+		statusLine = styles.SuccessText.Render("✓ " + constants.AnalyzingComplete)
 	} else if len(v.phases) > 0 && v.AllPhasesDone() {
-		statusLine = styles.SuccessText.Render("✓ Analysis complete")
+		statusLine = styles.SuccessText.Render("✓ " + constants.AnalyzingComplete)
 	} else {
 		currentPhase := ""
 		for _, p := range v.phases {
@@ -212,25 +185,19 @@ func (v *AnalyzingView) Render() string {
 		if currentPhase != "" {
 			statusLine = v.spinner.Render() + " " + styles.Body.Render(currentPhase)
 		} else {
-			statusLine = v.spinner.Render() + " " + styles.Body.Render("Running...")
+			statusLine = v.spinner.Render() + " " + styles.Body.Render(constants.AnalyzingRunning)
 		}
 	}
 
-	// Overall progress bar
-	overallBar := v.renderOverallProgress(sectionWidth)
-
 	// Terminal output
 	termOutput := v.terminal.Render(sectionWidth)
-
-	// Elapsed
-	elapsed := styles.Muted.Render(fmt.Sprintf("Elapsed: %.1fs", v.elapsedTime))
 
 	// Footer
 	var footerContent string
 	if v.done || v.failed {
 		footerContent = components.FooterHelp([]components.HelpItem{
-			{Key: "esc", Desc: "go back"},
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		})
 	} else {
 		footerContent = components.WizardProgressHelp()
@@ -247,11 +214,7 @@ func (v *AnalyzingView) Render() string {
 		"",
 		statusLine,
 		"",
-		overallBar,
-		"",
 		termOutput,
-		"",
-		elapsed,
 	)
 
 	padded := lipgloss.NewStyle().PaddingTop(2).Render(content)
@@ -267,40 +230,16 @@ func (v *AnalyzingView) Render() string {
 	return centered + "\n" + footer
 }
 
-func (v *AnalyzingView) renderOverallProgress(width int) string {
-	// Bar fills the section: subtract " 100%" (5) and some margin (2)
-	barWidth := width - 7
-	if barWidth < 20 {
-		barWidth = 20
-	}
-	progress := v.GetOverallProgress()
-	filledWidth := int(float64(barWidth) * progress)
-	emptyWidth := barWidth - filledWidth
-
-	filled := strings.Repeat("█", filledWidth)
-	empty := strings.Repeat("░", emptyWidth)
-
-	bar := lipgloss.NewStyle().Foreground(styles.Amber).Render(filled) +
-		lipgloss.NewStyle().Foreground(styles.MidGray).Render(empty)
-
-	percent := fmt.Sprintf("%3.0f%%", progress*100)
-
-	return lipgloss.NewStyle().
-		Width(width).
-		Align(lipgloss.Center).
-		Render(bar + " " + styles.Body.Render(percent))
-}
-
 // GetHelpItems returns context-specific help
 func (v *AnalyzingView) GetHelpItems() []components.HelpItem {
 	if v.done || v.failed {
 		return []components.HelpItem{
-			{Key: "esc", Desc: "go back"},
-			{Key: "ctrl+c", Desc: "quit"},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}
 	}
 	return []components.HelpItem{
-		{Key: "g", Desc: "play mini game"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }

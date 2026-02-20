@@ -1,6 +1,7 @@
 package views
 
 import (
+	"skene/internal/constants"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
 
@@ -28,51 +29,19 @@ type NextStepsView struct {
 func NewNextStepsView() *NextStepsView {
 	return &NextStepsView{
 		selectedIdx: 0,
-		header:      components.NewWizardHeader(7, "Next Steps"),
-		actions: []NextStepAction{
-			{
-				ID:          "plan",
-				Name:        "Generate Growth Plan",
-				Description: "Create a prioritized growth plan with implementation roadmap",
-				Command:     "uvx skene-growth plan",
-			},
-			{
-				ID:          "build",
-				Name:        "Build Implementation Prompt",
-				Description: "Generate a ready-to-use prompt for Cursor, Claude, or other AI tools",
-				Command:     "uvx skene-growth build",
-			},
-			{
-				ID:          "validate",
-				Name:        "Validate Manifest",
-				Description: "Validate the growth manifest against the schema",
-				Command:     "uvx skene-growth validate",
-			},
-			{
-				ID:          "rerun",
-				Name:        "Re-run Analysis",
-				Description: "Analyze the codebase again with the current configuration",
-				Command:     "uvx skene-growth analyze .",
-			},
-			{
-				ID:          "open",
-				Name:        "Open Generated Files",
-				Description: "View the analysis output in ./skene-context/",
-				Command:     "",
-			},
-			{
-				ID:          "config",
-				Name:        "Change Configuration",
-				Description: "Modify provider, model, or project settings",
-				Command:     "",
-			},
-			{
-				ID:          "exit",
-				Name:        "Exit",
-				Description: "Close Skene CLI",
-				Command:     "",
-			},
-		},
+		header:      components.NewTitleHeader(constants.StepNameNextSteps),
+		actions: func() []NextStepAction {
+			var actions []NextStepAction
+			for _, def := range constants.NextStepActions {
+				actions = append(actions, NextStepAction{
+					ID:          def.ID,
+					Name:        def.Name,
+					Description: def.Description,
+					Command:     def.Command,
+				})
+			}
+			return actions
+		}(),
 	}
 }
 
@@ -119,7 +88,7 @@ func (v *NextStepsView) Render() string {
 	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
 	// Success message
-	successMsg := styles.SuccessText.Render("Analysis complete! What would you like to do next?")
+	successMsg := styles.SuccessText.Render(constants.NextStepsSuccess)
 
 	// Actions list
 	actionsSection := v.renderActions(sectionWidth)
@@ -204,9 +173,9 @@ func (v *NextStepsView) renderCommandPreview(width int) string {
 // GetHelpItems returns context-specific help
 func (v *NextStepsView) GetHelpItems() []components.HelpItem {
 	return []components.HelpItem{
-		{Key: "↑/↓", Desc: "navigate"},
-		{Key: "enter", Desc: "select"},
-		{Key: "esc", Desc: "back to results"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescNavigate},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSelect},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBackToResults},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }

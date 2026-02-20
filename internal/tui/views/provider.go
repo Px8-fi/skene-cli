@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"skene/internal/constants"
 	"skene/internal/services/config"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
@@ -26,7 +27,7 @@ func NewProviderView() *ProviderView {
 		providers:     config.GetProviders(),
 		selectedIndex: 0,
 		maxVisible:    7,
-		header:        components.NewWizardHeader(3, "AI Provider"),
+		header:        components.NewWizardHeader(1, constants.StepNameAIProvider),
 	}
 }
 
@@ -185,9 +186,9 @@ func (v *ProviderView) renderProviderList(width int) string {
 // GetHelpItems returns context-specific help
 func (v *ProviderView) GetHelpItems() []components.HelpItem {
 	return []components.HelpItem{
-		{Key: "↑/↓", Desc: "select provider"},
-		{Key: "enter", Desc: "confirm selection"},
-		{Key: "esc", Desc: "go back"},
-		{Key: "ctrl+c", Desc: "quit"},
+		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescSelectProvider},
+		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirmSelection},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
+		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }

@@ -3,6 +3,7 @@ package views
 import (
 	"fmt"
 	"net/url"
+	"skene/internal/constants"
 	"skene/internal/services/config"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
@@ -37,7 +38,7 @@ const (
 
 // NewAuthView creates a new auth view
 func NewAuthView(provider *config.Provider) *AuthView {
-	authURL := "https://skene-cli-demo-9zc3.vercel.app/auth"
+	authURL := constants.SkeneAuthURL
 	if provider != nil && provider.AuthURL != "" {
 		authURL = provider.AuthURL
 	}
@@ -47,7 +48,7 @@ func NewAuthView(provider *config.Provider) *AuthView {
 		countdown:    3,
 		authURL:      authURL,
 		showFallback: false,
-		header:       components.NewWizardHeader(4, "Authentication"),
+		header:       components.NewWizardHeader(2, constants.StepNameAuthentication),
 		spinner:      components.NewSpinner(),
 		authState:    AuthStateCountdown,
 	}
@@ -147,8 +148,8 @@ func (v *AuthView) Render() string {
 		Width(v.width).
 		Align(lipgloss.Center).
 		Render(components.FooterHelp([]components.HelpItem{
-			{Key: "m", Desc: "manual entry"},
-			{Key: "esc", Desc: "cancel"},
+			{Key: constants.HelpKeyM, Desc: constants.HelpDescManualEntry},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescCancel},
 		}))
 
 	// Combine
@@ -174,10 +175,10 @@ func (v *AuthView) Render() string {
 }
 
 func (v *AuthView) renderCountdown(width int) string {
-	message := styles.Body.Render("Opening browser for Skene authentication")
+	message := styles.Body.Render(constants.AuthOpeningBrowser)
 	url := styles.Accent.Render(v.getDisplayURL())
 
-	countdownText := fmt.Sprintf("Redirecting in %ds...", v.countdown)
+	countdownText := fmt.Sprintf(constants.AuthRedirectingIn, v.countdown)
 	countdownStyled := styles.Muted.Render(countdownText)
 
 	// Countdown visual
@@ -211,8 +212,8 @@ func (v *AuthView) renderCountdown(width int) string {
 }
 
 func (v *AuthView) renderWaiting(width int) string {
-	message := v.spinner.SpinnerWithText("Waiting for authentication...")
-	subMessage := styles.Muted.Render("Complete the login in your browser")
+	message := v.spinner.SpinnerWithText(constants.AuthWaiting)
+	subMessage := styles.Muted.Render(constants.AuthWaitingSub)
 	url := styles.Accent.Render(v.getDisplayURL())
 
 	content := lipgloss.JoinVertical(
@@ -231,8 +232,8 @@ func (v *AuthView) renderWaiting(width int) string {
 }
 
 func (v *AuthView) renderVerifying(width int) string {
-	message := v.spinner.SpinnerWithText("Verifying credentials...")
-	subMessage := styles.Muted.Render("Setting up your account")
+	message := v.spinner.SpinnerWithText(constants.AuthVerifying)
+	subMessage := styles.Muted.Render(constants.AuthVerifyingSub)
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
@@ -248,7 +249,7 @@ func (v *AuthView) renderVerifying(width int) string {
 }
 
 func (v *AuthView) renderSuccess(width int) string {
-	message := styles.SuccessText.Render("✓ Authentication successful!")
+	message := styles.SuccessText.Render("✓ " + constants.AuthSuccess)
 	subMessage := styles.Muted.Render("API key received and saved")
 
 	content := lipgloss.JoinVertical(
@@ -275,9 +276,9 @@ func (v *AuthView) renderFallback() string {
 
 	wizHeader := lipgloss.NewStyle().Width(sectionWidth).Render(v.header.Render())
 
-	message := styles.Body.Render("Browser auth cancelled.")
-	subMessage := styles.Muted.Render("You can enter your Skene API key manually.")
-	hint := styles.Accent.Render("Press Enter to continue to manual entry")
+	message := styles.Body.Render(constants.AuthFallbackMessage)
+	subMessage := styles.Muted.Render(constants.AuthFallbackSub)
+	hint := styles.Accent.Render(constants.AuthFallbackHint)
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
@@ -297,8 +298,8 @@ func (v *AuthView) renderFallback() string {
 		Width(v.width).
 		Align(lipgloss.Center).
 		Render(components.FooterHelp([]components.HelpItem{
-			{Key: "enter", Desc: "continue"},
-			{Key: "esc", Desc: "go back"},
+			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescContinue},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
 		}))
 
 	fullContent := lipgloss.JoinVertical(
@@ -326,12 +327,12 @@ func (v *AuthView) renderFallback() string {
 func (v *AuthView) GetHelpItems() []components.HelpItem {
 	if v.showFallback {
 		return []components.HelpItem{
-			{Key: "enter", Desc: "continue to manual entry"},
-			{Key: "esc", Desc: "go back to provider selection"},
+			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescContinueManual},
+			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBackToProvider},
 		}
 	}
 	return []components.HelpItem{
-		{Key: "m", Desc: "skip to manual entry"},
-		{Key: "esc", Desc: "cancel and go back"},
+		{Key: constants.HelpKeyM, Desc: constants.HelpDescSkipManualEntry},
+		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescCancelGoBack},
 	}
 }

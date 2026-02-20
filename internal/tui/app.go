@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"skene/internal/constants"
 	"skene/internal/game"
 	"skene/internal/services/auth"
 	"skene/internal/services/config"
@@ -280,14 +281,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if a.state == StateInstalling && a.installingView != nil {
 			a.installingView.TickSpinner()
-			elapsed := time.Since(a.installStartTime).Seconds()
-			a.installingView.SetElapsedTime(elapsed)
 			a.simulateInstallProgress()
 		}
 		if a.state == StateAnalyzing && a.analyzingView != nil {
 			a.analyzingView.TickSpinner()
-			elapsed := time.Since(a.analysisStartTime).Seconds()
-			a.analyzingView.SetElapsedTime(elapsed)
 			// Real analysis progress is updated via AnalysisPhaseMsg
 		}
 		if a.state == StateAuth && a.authView != nil {
@@ -329,10 +326,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case InstallDoneMsg:
 		if msg.Error != nil {
 			a.showError(&views.ErrorInfo{
-				Code:       "INSTALL_FAILED",
-				Title:      "Installation Failed",
+				Code:       constants.ErrorInstallFailed,
+				Title:      constants.ErrorInstallTitle,
 				Message:    msg.Error.Error(),
-				Suggestion: "Check the logs and try again.",
+				Suggestion: constants.ErrorInstallSuggest,
 				Severity:   views.SeverityError,
 				Retryable:  true,
 			})
@@ -350,8 +347,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if err != nil {
 			suggestion := analysisErrorSuggestion(err)
 			a.showError(&views.ErrorInfo{
-				Code:       "ANALYSIS_FAILED",
-				Title:      "Analysis Failed",
+				Code:       constants.ErrorAnalysisFailed,
+				Title:      constants.ErrorAnalysisTitle,
 				Message:    err.Error(),
 				Suggestion: suggestion,
 				Severity:   views.SeverityError,
@@ -363,7 +360,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.resultsView = views.NewResultsViewWithContent(
 					msg.Result.GrowthPlan,
 					msg.Result.Manifest,
-					msg.Result.ProductDocs,
+					msg.Result.GrowthTemplate,
 				)
 			} else {
 				a.resultsView = views.NewResultsView()
@@ -714,10 +711,10 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 			choice := a.projectDirView.GetExistingChoiceLabel()
 			a.configMgr.SetProjectDir(a.projectDirView.GetProjectDir())
 			switch choice {
-			case "View Analysis":
+			case constants.ProjectDirViewAnalysis:
 				a.projectDirView.SetExistingChoice(true)
 				a.transitionToResultsFromExisting()
-			case "Rerun Analysis":
+			case constants.ProjectDirRerunAnalysis:
 				a.projectDirView.SetExistingChoice(false)
 				a.transitionToAnalysisConfig()
 			}
@@ -749,9 +746,9 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 			case "enter":
 				btn := a.projectDirView.GetBrowseButtonLabel()
 				switch btn {
-				case "Select This Directory":
+				case constants.ButtonSelectDir:
 					a.projectDirView.BrowseConfirm()
-				case "Cancel":
+				case constants.ButtonCancel:
 					a.projectDirView.StopBrowsing()
 				}
 			case "tab":
@@ -790,11 +787,11 @@ func (a *App) handleProjectDirKeys(msg tea.KeyMsg) tea.Cmd {
 		case "enter":
 			btn := a.projectDirView.GetButtonLabel()
 			switch btn {
-			case "Use Current":
+			case constants.ButtonUseCurrent:
 				a.projectDirView.UseCurrentDir()
-			case "Browse":
+			case constants.ButtonBrowse:
 				a.projectDirView.StartBrowsing()
-			case "Continue":
+			case constants.ButtonContinue:
 				if a.projectDirView.IsValid() {
 					// Check for existing analysis first
 					if a.projectDirView.CheckForExistingAnalysis() {
@@ -928,10 +925,11 @@ func (a *App) handleNextStepsKeys(key string) tea.Cmd {
 			if projectDir == "" {
 				projectDir, _ = os.Getwd()
 			}
-			outputDir := filepath.Join(projectDir, "skene-context")
+			outputDir := filepath.Join(projectDir, constants.OutputDirName)
 			browser.OpenURL(outputDir)
 		}
 	case "esc":
+		a.refreshResultsView()
 		a.state = StateResults
 	}
 	return nil
@@ -1107,19 +1105,27 @@ func (a *App) transitionToAnalysisConfig() {
 
 func (a *App) transitionToResultsFromExisting() {
 	projectDir := a.configMgr.Config.ProjectDir
-	outputDir := filepath.Join(projectDir, "skene-context")
+	outputDir := filepath.Join(projectDir, constants.OutputDirName)
 
-	// Try to load existing analysis files
-	growthPlan := loadFileContent(filepath.Join(outputDir, "growth-plan.md"))
-	if growthPlan == "" {
-		growthPlan = loadFileContent(filepath.Join(outputDir, "growth-template.json"))
-	}
-	manifest := loadFileContent(filepath.Join(outputDir, "growth-manifest.json"))
-	productDocs := loadFileContent(filepath.Join(outputDir, "product-docs.md"))
+	growthPlan := loadFileContent(filepath.Join(outputDir, constants.GrowthPlanFile))
+	manifest := loadFileContent(filepath.Join(outputDir, constants.GrowthManifestFile))
+	growthTemplate := loadFileContent(filepath.Join(outputDir, constants.GrowthTemplateFile))
 
-	a.resultsView = views.NewResultsViewWithContent(growthPlan, manifest, productDocs)
+	a.resultsView = views.NewResultsViewWithContent(growthPlan, manifest, growthTemplate)
 	a.resultsView.SetSize(a.width, a.height)
 	a.state = StateResults
+}
+
+func (a *App) refreshResultsView() {
+	if a.resultsView == nil {
+		return
+	}
+	projectDir := a.configMgr.Config.ProjectDir
+	if projectDir == "" {
+		return
+	}
+	outputDir := filepath.Join(projectDir, constants.OutputDirName)
+	a.resultsView.RefreshContent(outputDir)
 }
 
 func (a *App) applyAnalysisConfig() {

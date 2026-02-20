@@ -2,6 +2,7 @@ package components
 
 import (
 	"fmt"
+	"skene/internal/constants"
 	"skene/internal/tui/styles"
 
 	"github.com/charmbracelet/lipgloss"
@@ -15,10 +16,10 @@ type WizardStep struct {
 
 // WizardSteps defines the user-facing wizard flow
 var WizardSteps = []WizardStep{
-	{Number: 1, Name: "AI Provider"},
-	{Number: 2, Name: "Authentication"},
-	{Number: 3, Name: "Project Setup"},
-	{Number: 4, Name: "Analysing"},
+	{Number: 1, Name: constants.StepNameAIProvider},
+	{Number: 2, Name: constants.StepNameAuthentication},
+	{Number: 3, Name: constants.StepNameProjectSetup},
+	{Number: 4, Name: constants.StepNameAnalysingStepper},
 }
 
 // WizardHeader renders the wizard progress header
@@ -68,7 +69,7 @@ func (h *WizardHeader) Render() string {
 	}
 
 	// Step counter
-	stepCounter := styles.Muted.Render(fmt.Sprintf("Step %d of %d", h.CurrentStep, h.TotalSteps))
+	stepCounter := styles.Muted.Render(fmt.Sprintf(constants.StepCounterFormat, h.CurrentStep, h.TotalSteps))
 
 	// Step name
 	stepName := styles.Title.Render(h.StepName)
@@ -84,22 +85,6 @@ func (h *WizardHeader) Render() string {
 	)
 
 	return content
-}
-
-// RenderCompact renders a compact single-line header
-func (h *WizardHeader) RenderCompact() string {
-	dots := renderWizardDots(h.CurrentStep, h.TotalSteps)
-	stepInfo := styles.Muted.Render(fmt.Sprintf("Step %d/%d", h.CurrentStep, h.TotalSteps))
-	stepName := styles.Accent.Render(h.StepName)
-
-	return lipgloss.JoinHorizontal(
-		lipgloss.Center,
-		dots,
-		"  ",
-		stepInfo,
-		"  ",
-		stepName,
-	)
 }
 
 func renderWizardDots(current, total int) string {

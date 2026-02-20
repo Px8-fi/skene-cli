@@ -11,8 +11,6 @@ import (
 	"skene/internal/services/auth"
 	"skene/internal/services/config"
 	"skene/internal/services/growth"
-	"skene/internal/services/ide"
-	"skene/internal/services/syscheck"
 	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
 	"skene/internal/tui/views"
@@ -33,9 +31,6 @@ type AppState int
 
 const (
 	StateWelcome        AppState = iota // Welcome screen
-	StateSysCheck                       // System prerequisite checks
-	StateInstallMethod                  // Select uvx vs pip
-	StateInstalling                     // Installation progress
 	StateProviderSelect                 // AI provider selection
 	StateModelSelect                    // Model selection for chosen provider
 	StateAuth                           // Skene magic link authentication
@@ -60,16 +55,6 @@ type TickMsg time.Time
 // CountdownMsg is sent during auth countdown
 type CountdownMsg int
 
-// SysCheckDoneMsg is sent when system checks complete
-type SysCheckDoneMsg struct {
-	Results *syscheck.SystemCheckResult
-}
-
-// InstallDoneMsg is sent when installation completes
-type InstallDoneMsg struct {
-	Error error
-}
-
 // AnalysisDoneMsg is sent when analysis completes
 type AnalysisDoneMsg struct {
 	Error  error
@@ -89,12 +74,6 @@ type NextStepOutputMsg struct {
 // NextStepDoneMsg is sent when a next-step command finishes
 type NextStepDoneMsg struct {
 	Error error
-}
-
-// IDEHelpSentMsg is sent when IDE help request is sent
-type IDEHelpSentMsg struct {
-	Error    error
-	FilePath string
 }
 
 // LocalModelDetectMsg is sent with local model detection results
@@ -130,22 +109,15 @@ type App struct {
 	time      float64
 
 	// Services
-	configMgr    *config.Manager
-	sysChecker   *syscheck.Checker
-	sysCheckDone bool
-	ideComm      *ide.Communicator
+	configMgr *config.Manager
 
 	// Selected configuration
 	selectedProvider *config.Provider
 	selectedModel    *config.Model
-	installMethod    string // "uvx" or "pip"
 
 	// Views
-	welcomeView        *views.WelcomeView
-	sysCheckView       *views.SysCheckView
-	installMethodView  *views.InstallMethodView
-	installingView     *views.InstallingView
-	providerView       *views.ProviderView
+	welcomeView    *views.WelcomeView
+	providerView   *views.ProviderView
 	modelView          *views.ModelView
 	authView           *views.AuthView
 	apiKeyView         *views.APIKeyView
@@ -165,7 +137,6 @@ type App struct {
 	game *game.Game
 
 	// Timing
-	installStartTime  time.Time
 	analysisStartTime time.Time
 
 	// Auth state
@@ -193,14 +164,9 @@ func NewApp() *App {
 		configMgr.Config.OutputDir = "./skene-context"
 	}
 
-	// Get workspace path for IDE communication
-	workspacePath, _ := os.Getwd()
-
 	app := &App{
 		state:        StateWelcome,
 		configMgr:    configMgr,
-		sysChecker:   syscheck.NewChecker(),
-		ideComm:      ide.NewCommunicator(workspacePath),
 		welcomeView:  views.NewWelcomeView(),
 		providerView: views.NewProviderView(),
 		helpOverlay:  components.NewHelpOverlay(),
@@ -276,13 +242,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Tick spinners for active views
-		if a.state == StateSysCheck && a.sysCheckView != nil {
-			a.sysCheckView.TickSpinner()
-		}
-		if a.state == StateInstalling && a.installingView != nil {
-			a.installingView.TickSpinner()
-			a.simulateInstallProgress()
-		}
 		if a.state == StateAnalyzing && a.analyzingView != nil {
 			a.analyzingView.TickSpinner()
 			// Real analysis progress is updated via AnalysisPhaseMsg
@@ -315,28 +274,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else if a.authView != nil {
 			a.authView.SetCountdown(a.authCountdown)
 			cmds = append(cmds, countdown(a.authCountdown-1))
-		}
-
-	case SysCheckDoneMsg:
-		if a.sysCheckView != nil {
-			a.sysCheckView.SetResults(msg.Results)
-			a.sysCheckDone = true
-		}
-
-	case InstallDoneMsg:
-		if msg.Error != nil {
-			a.showError(&views.ErrorInfo{
-				Code:       constants.ErrorInstallFailed,
-				Title:      constants.ErrorInstallTitle,
-				Message:    msg.Error.Error(),
-				Suggestion: constants.ErrorInstallSuggest,
-				Severity:   views.SeverityError,
-				Retryable:  true,
-			})
-		} else {
-			// Move to provider selection after a brief pause
-			a.state = StateProviderSelect
-			a.providerView.SetSize(a.width, a.height)
 		}
 
 	case AnalysisDoneMsg:
@@ -385,24 +322,6 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.analyzingView.SetCommandFailed(msg.Error.Error())
 			} else {
 				a.analyzingView.SetDone()
-			}
-		}
-
-	case IDEHelpSentMsg:
-		if msg.Error != nil {
-			// Show error if sending failed
-			a.showError(&views.ErrorInfo{
-				Code:       "IDE_COMM_FAILED",
-				Title:      "Failed to Send Request to IDE",
-				Message:    msg.Error.Error(),
-				Suggestion: "Please check your workspace permissions or try again.",
-				Severity:   views.SeverityWarning,
-				Retryable:  true,
-			})
-		} else {
-			// Success - update the view to show success message
-			if a.sysCheckView != nil {
-				a.sysCheckView.SetIDERequestSent(msg.FilePath)
 			}
 		}
 
@@ -490,12 +409,6 @@ func (a *App) handleKeyPress(msg tea.KeyMsg) tea.Cmd {
 	switch a.state {
 	case StateWelcome:
 		return a.handleWelcomeKeys(key)
-	case StateSysCheck:
-		return a.handleSysCheckKeys(key)
-	case StateInstallMethod:
-		return a.handleInstallMethodKeys(key)
-	case StateInstalling:
-		return a.handleInstallingKeys(key)
 	case StateProviderSelect:
 		return a.handleProviderKeys(msg)
 	case StateModelSelect:
@@ -536,58 +449,6 @@ func (a *App) handleWelcomeKeys(key string) tea.Cmd {
 	return nil
 }
 
-func (a *App) handleSysCheckKeys(key string) tea.Cmd {
-	if !a.sysCheckDone {
-		return nil // Ignore keys during check
-	}
-
-	switch key {
-	case "enter":
-		if a.sysCheckView.CanProceed() {
-			a.transitionToInstallMethod()
-		}
-	}
-	return nil
-}
-
-func (a *App) handleInstallMethodKeys(key string) tea.Cmd {
-	switch key {
-	case "up", "k":
-		a.installMethodView.HandleUp()
-	case "down", "j":
-		a.installMethodView.HandleDown()
-	case "enter":
-		method := a.installMethodView.GetSelectedMethod()
-		// Check if uvx is available when selected
-		sysResults := a.sysChecker.GetResults()
-		if method == "uvx" && sysResults.UV.Status != syscheck.StatusPassed {
-			// Can't use uvx, show warning
-			return nil
-		}
-		a.installMethod = method
-		a.startInstalling()
-	case "esc":
-		a.state = StateSysCheck
-	}
-	return nil
-}
-
-func (a *App) handleInstallingKeys(key string) tea.Cmd {
-	switch key {
-	case "g":
-		a.prevState = a.state
-		a.state = StateGame
-		if a.game == nil {
-			a.game = game.NewGame(60, 20)
-		} else {
-			a.game.Restart()
-		}
-		a.game.SetSize(60, 20)
-		return game.GameTickCmd()
-	}
-	return nil
-}
-
 func (a *App) handleProviderKeys(msg tea.KeyMsg) tea.Cmd {
 	key := msg.String()
 	switch key {
@@ -598,12 +459,7 @@ func (a *App) handleProviderKeys(msg tea.KeyMsg) tea.Cmd {
 	case "enter":
 		return a.selectProvider()
 	case "esc":
-		// Only go back to install method if it was actually visited
-		if a.installMethodView != nil {
-			a.state = StateInstallMethod
-		} else {
-			a.state = StateWelcome
-		}
+		a.state = StateWelcome
 	}
 	return nil
 }
@@ -1070,14 +926,6 @@ func (a *App) transitionToAPIKey() {
 	a.state = StateAPIKey
 }
 
-func (a *App) transitionToInstallMethod() {
-	sysResults := a.sysChecker.GetResults()
-	uvAvailable := sysResults.UV.Status == syscheck.StatusPassed
-	a.installMethodView = views.NewInstallMethodView(uvAvailable)
-	a.installMethodView.SetSize(a.width, a.height)
-	a.state = StateInstallMethod
-}
-
 func (a *App) transitionToProjectDir() {
 	a.projectDirView = views.NewProjectDirView()
 	a.projectDirView.SetSize(a.width, a.height)
@@ -1164,18 +1012,6 @@ func (a *App) navigateBackFromError() {
 	// its view is initialized. Fall back to provider select which is always initialized.
 	target := a.prevState
 	switch target {
-	case StateInstallMethod:
-		if a.installMethodView == nil {
-			target = StateWelcome
-		}
-	case StateSysCheck:
-		if a.sysCheckView == nil {
-			target = StateWelcome
-		}
-	case StateInstalling:
-		if a.installingView == nil {
-			target = StateProviderSelect
-		}
 	case StateModelSelect:
 		if a.modelView == nil {
 			target = StateProviderSelect
@@ -1211,42 +1047,6 @@ func (a *App) navigateBackFromError() {
 // ═══════════════════════════════════════════════════════════════════
 // ASYNC OPERATIONS
 // ═══════════════════════════════════════════════════════════════════
-
-func (a *App) startSysCheck() {
-	a.sysCheckView = views.NewSysCheckView()
-	a.sysCheckView.SetSize(a.width, a.height)
-	a.sysCheckDone = false
-	a.state = StateSysCheck
-}
-
-func (a *App) startSysCheckCmd() tea.Cmd {
-	checker := a.sysChecker
-	return func() tea.Msg {
-		results := checker.RunAllChecks()
-		return SysCheckDoneMsg{Results: results}
-	}
-}
-
-
-func (a *App) sendIDEHelpRequest() tea.Cmd {
-	results := a.sysChecker.GetResults()
-	comm := a.ideComm
-	return func() tea.Msg {
-		err := comm.SendSystemCheckIssues(results)
-		if err != nil {
-			return IDEHelpSentMsg{Error: err, FilePath: ""}
-		}
-		filePath := comm.GetRequestFilePath()
-		return IDEHelpSentMsg{Error: nil, FilePath: filePath}
-	}
-}
-
-func (a *App) startInstalling() {
-	a.installingView = views.NewInstallingView(a.installMethod)
-	a.installingView.SetSize(a.width, a.height)
-	a.installStartTime = time.Now()
-	a.state = StateInstalling
-}
 
 func (a *App) startAnalysis() tea.Cmd {
 	a.analyzingView = views.NewAnalyzingView()
@@ -1414,91 +1214,12 @@ func (a *App) showError(err *views.ErrorInfo) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// PROGRESS SIMULATION
-// ═══════════════════════════════════════════════════════════════════
-
-func (a *App) simulateInstallProgress() {
-	if a.installingView == nil || a.installingView.AllTasksDone() {
-		if a.installingView != nil && a.installingView.AllTasksDone() {
-			// Transition to provider selection
-			a.state = StateProviderSelect
-			a.providerView.SetSize(a.width, a.height)
-		}
-		return
-	}
-
-	elapsed := time.Since(a.installStartTime).Seconds()
-
-	// Simulate tasks completing over time
-	taskCount := 3
-	if a.installMethod == "pip" {
-		taskCount = 4
-	}
-
-	taskDuration := 2.0 // seconds per task
-	for i := 0; i < taskCount; i++ {
-		taskStart := float64(i) * taskDuration
-		taskEnd := taskStart + taskDuration
-
-		if elapsed > taskStart && elapsed <= taskEnd {
-			progress := (elapsed - taskStart) / taskDuration
-			if progress > 1.0 {
-				progress = 1.0
-			}
-			a.installingView.UpdateTask(i, progress)
-		} else if elapsed > taskEnd {
-			a.installingView.UpdateTask(i, 1.0)
-		}
-	}
-}
-
-func (a *App) simulateAnalysisProgress() {
-	if a.analyzingView == nil || a.analyzingView.AllPhasesDone() {
-		if a.analyzingView != nil && a.analyzingView.AllPhasesDone() {
-			// Transition to results
-			a.state = StateResults
-			a.resultsView = views.NewResultsView()
-			a.resultsView.SetSize(a.width, a.height)
-		}
-		return
-	}
-
-	elapsed := time.Since(a.analysisStartTime).Seconds()
-
-	// Simulate 6 phases completing over ~12 seconds
-	phaseDuration := 2.0
-	for i := 0; i < 6; i++ {
-		phaseStart := float64(i) * phaseDuration
-		phaseEnd := phaseStart + phaseDuration
-
-		if elapsed > phaseStart && elapsed <= phaseEnd {
-			progress := (elapsed - phaseStart) / phaseDuration
-			if progress > 1.0 {
-				progress = 1.0
-			}
-			a.analyzingView.UpdatePhase(i, progress, "")
-		} else if elapsed > phaseEnd {
-			a.analyzingView.UpdatePhase(i, 1.0, "")
-		}
-	}
-}
-
-// ═══════════════════════════════════════════════════════════════════
 // VIEW SIZING
 // ═══════════════════════════════════════════════════════════════════
 
 func (a *App) updateViewSizes() {
 	if a.welcomeView != nil {
 		a.welcomeView.SetSize(a.width, a.height)
-	}
-	if a.sysCheckView != nil {
-		a.sysCheckView.SetSize(a.width, a.height)
-	}
-	if a.installMethodView != nil {
-		a.installMethodView.SetSize(a.width, a.height)
-	}
-	if a.installingView != nil {
-		a.installingView.SetSize(a.width, a.height)
 	}
 	if a.providerView != nil {
 		a.providerView.SetSize(a.width, a.height)
@@ -1549,18 +1270,6 @@ func (a *App) View() string {
 	switch a.state {
 	case StateWelcome:
 		content = a.welcomeView.Render()
-	case StateSysCheck:
-		if a.sysCheckView != nil {
-			content = a.sysCheckView.Render()
-		}
-	case StateInstallMethod:
-		if a.installMethodView != nil {
-			content = a.installMethodView.Render()
-		}
-	case StateInstalling:
-		if a.installingView != nil {
-			content = a.installingView.Render()
-		}
 	case StateProviderSelect:
 		content = a.providerView.Render()
 	case StateModelSelect:
@@ -1643,18 +1352,6 @@ func (a *App) getCurrentHelpItems() []components.HelpItem {
 	switch a.state {
 	case StateWelcome:
 		return a.welcomeView.GetHelpItems()
-	case StateSysCheck:
-		if a.sysCheckView != nil {
-			return a.sysCheckView.GetHelpItems()
-		}
-	case StateInstallMethod:
-		if a.installMethodView != nil {
-			return a.installMethodView.GetHelpItems()
-		}
-	case StateInstalling:
-		if a.installingView != nil {
-			return a.installingView.GetHelpItems()
-		}
 	case StateProviderSelect:
 		return a.providerView.GetHelpItems()
 	case StateModelSelect:

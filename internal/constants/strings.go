@@ -2,25 +2,25 @@ package constants
 
 // Wizard step names
 const (
-	StepNameAIProvider     = "AI Provider"
-	StepNameSelectModel    = "Select Model"
-	StepNameAuthentication = "Authentication"
+	StepNameAIProvider      = "AI Provider"
+	StepNameSelectModel     = "Select Model"
+	StepNameAuthentication  = "Authentication"
 	StepNameLocalModelSetup = "Local Model Setup"
-	StepNameProjectDir     = "Project Directory"
-	StepNameAnalysisConfig = "Analysis Configuration"
-	StepNameAnalyzing      = "Running Skene Growth Analysis"
-	StepNameResults        = "Analysis Results"
-	StepNameNextSteps      = "Next Steps"
-	StepNameSysCheck       = "System Check"
-	StepNameInstallMethod  = "Install Method"
-	StepNameInstalling     = "Installing"
+	StepNameProjectDir      = "Project Directory"
+	StepNameProjectSetup    = "Project Setup"
+	StepNameAnalysisConfig  = "Analysis Configuration"
+	StepNameAnalyzing       = "Running Skene Growth Analysis"
+	StepNameAnalysingStepper = "Analysing"
+	StepNameResults         = "Analysis Results"
+	StepNameNextSteps       = "Next Steps"
+	StepCounterFormat       = "Step %d of %d"
 )
 
 // Dashboard tab names
 const (
-	TabGrowthManifest  = "Growth Manifest"
-	TabGrowthTemplate  = "Growth Template"
-	TabGrowthPlan      = "Growth Plan"
+	TabGrowthManifest = "Growth Manifest"
+	TabGrowthTemplate = "Growth Template"
+	TabGrowthPlan     = "Growth Plan"
 )
 
 // Dashboard placeholder content
@@ -56,8 +56,8 @@ The plan will contain:
 
 // Results view
 const (
-	ResultsBanner     = "Skene Analysis Complete"
-	ResultsNextSteps  = "Press 'n' for next steps"
+	ResultsBanner    = "Skene Analysis Complete"
+	ResultsNextSteps = "Press 'n' for next steps"
 )
 
 // Next steps view
@@ -121,47 +121,47 @@ var NextStepActions = []NextStepDef{
 // Welcome view
 const (
 	WelcomeSubtitle = "Product-Led Growth analysis for your codebase"
-	WelcomeCTA      = ">ENTER<"
+	WelcomeCTA      = "> ENTER <"
 )
 
 // Auth view
 const (
-	AuthOpeningBrowser     = "Opening browser for Skene authentication"
-	AuthRedirectingIn      = "Redirecting in %ds..."
-	AuthWaiting            = "Waiting for authentication..."
-	AuthWaitingSub         = "Complete the login in your browser"
-	AuthVerifying          = "Verifying credentials..."
-	AuthVerifyingSub       = "Setting up your account"
-	AuthSuccess            = "Authentication successful!"
-	AuthFallbackMessage    = "Browser auth cancelled."
-	AuthFallbackSub        = "You can enter your Skene API key manually."
-	AuthFallbackHint       = "Press Enter to continue to manual entry"
+	AuthOpeningBrowser  = "Opening browser for Skene authentication"
+	AuthRedirectingIn   = "Redirecting in %ds..."
+	AuthWaiting         = "Waiting for authentication..."
+	AuthWaitingSub      = "Complete the login in your browser"
+	AuthVerifying       = "Verifying credentials..."
+	AuthVerifyingSub    = "Setting up your account"
+	AuthSuccess         = "Authentication successful!"
+	AuthFallbackMessage = "Browser auth cancelled."
+	AuthFallbackSub     = "You can enter your Skene API key manually."
+	AuthFallbackHint    = "Press Enter to continue to manual entry"
 )
 
 // API key view
 const (
-	APIKeyHeader         = "Enter API Credentials"
-	APIKeyValidating     = "Validating API key..."
-	APIKeyValidated      = "API key validated"
-	APIKeyTooShort       = "API key is too short"
+	APIKeyHeader          = "Enter API Credentials"
+	APIKeyValidating      = "Validating API key..."
+	APIKeyValidated       = "API key validated"
+	APIKeyTooShort        = "API key is too short"
 	APIKeyBaseURLRequired = "Base URL is required for generic providers"
 )
 
 // Provider-specific validation messages
 const (
-	OpenAIKeyFormat     = "OpenAI keys start with 'sk-' and are at least 20 characters"
-	AnthropicKeyFormat  = "Invalid Anthropic API key format"
+	OpenAIKeyFormat    = "OpenAI keys start with 'sk-' and are at least 20 characters"
+	AnthropicKeyFormat = "Invalid Anthropic API key format"
 )
 
 // System check view
 const (
-	SysCheckHeader      = "Checking prerequisites..."
-	SysCheckSettingUp   = "Setting up uvx runtime..."
-	SysCheckFirstRun    = "This may take a moment on first run"
-	SysCheckRunning     = "Running system checks..."
-	SysCheckAllPassed   = "All checks passed! Your system is ready."
-	SysCheckFailed      = "Failed to set up uvx runtime. Check your internet connection and try again."
-	SysCheckIDESent     = "Request sent to IDE!"
+	SysCheckHeader    = "Checking prerequisites..."
+	SysCheckSettingUp = "Setting up uvx runtime..."
+	SysCheckFirstRun  = "This may take a moment on first run"
+	SysCheckRunning   = "Running system checks..."
+	SysCheckAllPassed = "All checks passed! Your system is ready."
+	SysCheckFailed    = "Failed to set up uvx runtime. Check your internet connection and try again."
+	SysCheckIDESent   = "Request sent to IDE!"
 )
 
 // Project directory view
@@ -182,11 +182,11 @@ const (
 
 // Analysis config view
 const (
-	AnalysisConfigSummary     = "Analysis Summary"
-	AnalysisConfigQuestion    = "Use recommended settings?"
-	AnalysisConfigDefault     = "Default installs and runs all Skene packages via uvx"
-	AnalysisConfigSelectPkgs  = "Select packages to include in the analysis:"
-	AnalysisConfigToggleHint  = "space toggle  •  enter start analysis"
+	AnalysisConfigSummary    = "Analysis Summary"
+	AnalysisConfigQuestion   = "Use recommended settings?"
+	AnalysisConfigDefault    = "Default installs and runs all Skene packages via uvx"
+	AnalysisConfigSelectPkgs = "Select packages to include in the analysis:"
+	AnalysisConfigToggleHint = "space toggle  •  enter start analysis"
 )
 
 // Analyzing view
@@ -198,38 +198,30 @@ const (
 )
 
 // Analysis phase names
-// TODO: Remove legacy phase code 
+// TODO: Remove legacy phase code
 const (
-	PhaseScanCodebase    = "Scanning codebase"
-	PhaseDetectFeatures  = "Detecting product features"
-	PhaseGrowthLoops     = "Growth loop analysis"
-	PhaseMonetisation    = "Monetisation analysis"
-	PhaseOpportunities   = "Opportunity modelling"
-	PhaseGenerateDocs    = "Generating manifests & docs"
-)
-
-// Installing view
-const (
-	InstallingTitle = "Installing"
+	PhaseScanCodebase   = "Scanning codebase"
+	PhaseDetectFeatures = "Detecting product features"
+	PhaseGrowthLoops    = "Growth loop analysis"
+	PhaseMonetisation   = "Monetisation analysis"
+	PhaseOpportunities  = "Opportunity modelling"
+	PhaseGenerateDocs   = "Generating manifests & docs"
 )
 
 // Error view
 const (
-	ErrorInstallFailed  = "INSTALL_FAILED"
-	ErrorInstallTitle   = "Installation Failed"
-	ErrorInstallSuggest = "Check the logs and try again."
 	ErrorAnalysisFailed = "ANALYSIS_FAILED"
 	ErrorAnalysisTitle  = "Analysis Failed"
 )
 
 // Button labels
 const (
-	ButtonContinue     = "Continue"
-	ButtonQuit         = "Quit"
-	ButtonUseCurrent   = "Use Current"
-	ButtonBrowse       = "Browse"
-	ButtonSelectDir    = "Select This Directory"
-	ButtonCancel       = "Cancel"
+	ButtonContinue   = "Continue"
+	ButtonQuit       = "Quit"
+	ButtonUseCurrent = "Use Current"
+	ButtonBrowse     = "Browse"
+	ButtonSelectDir  = "Select This Directory"
+	ButtonCancel     = "Cancel"
 )
 
 // Local model view
@@ -256,43 +248,43 @@ const (
 
 // Help descriptions
 const (
-	HelpDescNavigate        = "navigate"
-	HelpDescSelect          = "select"
-	HelpDescSelectOption    = "select option"
-	HelpDescSelectProvider  = "select provider"
-	HelpDescSelectModel     = "select model"
-	HelpDescSelectMethod    = "select method"
-	HelpDescConfirm         = "confirm"
+	HelpDescNavigate         = "navigate"
+	HelpDescSelect           = "select"
+	HelpDescSelectOption     = "select option"
+	HelpDescSelectProvider   = "select provider"
+	HelpDescSelectModel      = "select model"
+
+	HelpDescConfirm          = "confirm"
 	HelpDescConfirmSelection = "confirm selection"
-	HelpDescSubmit          = "submit"
-	HelpDescContinue        = "continue"
-	HelpDescStart           = "start"
-	HelpDescStartAnalysis   = "start analysis"
-	HelpDescGoBack          = "go back"
-	HelpDescBack            = "back"
-	HelpDescBackToResults   = "back to results"
-	HelpDescCancel          = "cancel"
-	HelpDescCancelGoBack    = "cancel and go back"
-	HelpDescQuit            = "quit"
-	HelpDescScroll          = "scroll"
-	HelpDescSwitchTabs      = "switch tabs"
-	HelpDescFocusContent    = "focus content"
-	HelpDescFocusTabs       = "focus tabs"
-	HelpDescFocus           = "focus"
-	HelpDescSwitchFocus     = "switch focus"
-	HelpDescSwitchField     = "switch field"
-	HelpDescToggleHelp      = "toggle help"
-	HelpDescHelp            = "help"
-	HelpDescNextSteps       = "next steps"
-	HelpDescPlayMiniGame    = "play mini game"
-	HelpDescPlayGame        = "play game"
-	HelpDescRetry           = "retry"
-	HelpDescRetryDetection  = "retry detection"
-	HelpDescManualEntry     = "manual entry"
-	HelpDescSkipManualEntry = "skip to manual entry"
-	HelpDescContinueManual  = "continue to manual entry"
-	HelpDescBackToProvider  = "go back to provider selection"
-	HelpDescToggleOption    = "toggle option"
-	HelpDescOpenFolder      = "open folder"
-	HelpDescTabs            = "tabs"
+	HelpDescSubmit           = "submit"
+	HelpDescContinue         = "continue"
+	HelpDescStart            = "start"
+	HelpDescStartAnalysis    = "start analysis"
+	HelpDescGoBack           = "go back"
+	HelpDescBack             = "back"
+	HelpDescBackToResults    = "back to results"
+	HelpDescCancel           = "cancel"
+	HelpDescCancelGoBack     = "cancel and go back"
+	HelpDescQuit             = "quit"
+	HelpDescScroll           = "scroll"
+	HelpDescSwitchTabs       = "switch tabs"
+	HelpDescFocusContent     = "focus content"
+	HelpDescFocusTabs        = "focus tabs"
+	HelpDescFocus            = "focus"
+	HelpDescSwitchFocus      = "switch focus"
+	HelpDescSwitchField      = "switch field"
+	HelpDescToggleHelp       = "toggle help"
+	HelpDescHelp             = "help"
+	HelpDescNextSteps        = "next steps"
+	HelpDescPlayMiniGame     = "play mini game"
+	HelpDescPlayGame         = "play game"
+	HelpDescRetry            = "retry"
+	HelpDescRetryDetection   = "retry detection"
+	HelpDescManualEntry      = "manual entry"
+	HelpDescSkipManualEntry  = "skip to manual entry"
+	HelpDescContinueManual   = "continue to manual entry"
+	HelpDescBackToProvider   = "go back to provider selection"
+	HelpDescToggleOption     = "toggle option"
+	HelpDescOpenFolder       = "open folder"
+	HelpDescTabs             = "tabs"
 )

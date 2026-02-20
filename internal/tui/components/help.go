@@ -81,69 +81,6 @@ func FooterHelp(items []HelpItem) string {
 	return strings.Join(parts, styles.HelpSeparator.String())
 }
 
-// DefaultFooterHelp returns common footer help
-func DefaultFooterHelp() string {
-	return FooterHelp([]HelpItem{
-		{Key: constants.HelpKeyHelp, Desc: constants.HelpDescHelp},
-		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
-}
-
-// IntroHelp returns intro screen help
-func IntroHelp() string {
-	return FooterHelp([]HelpItem{
-		{Key: constants.HelpKeyHelp, Desc: constants.HelpDescHelp},
-		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
-}
-
-// ConfigHelp returns config screen help
-func ConfigHelp() string {
-	return FooterHelp([]HelpItem{
-		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescNavigate},
-		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSelect},
-		{Key: constants.HelpKeyHelp, Desc: constants.HelpDescHelp},
-		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
-}
-
-// NavHelp returns navigation help
-func NavHelp() string {
-	return FooterHelp([]HelpItem{
-		{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescNavigate},
-		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescConfirm},
-		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
-		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
-}
-
-// InputHelp returns input screen help
-func InputHelp() string {
-	return FooterHelp([]HelpItem{
-		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSubmit},
-		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescBack},
-		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
-}
-
-// LoadingHelp returns loading screen help
-func LoadingHelp() string {
-	return FooterHelp([]HelpItem{
-		{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayGame},
-		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
-}
-
-// DashboardHelp returns dashboard help
-func DashboardHelp() string {
-	return FooterHelp([]HelpItem{
-		{Key: constants.HelpKeyLeftRight, Desc: constants.HelpDescTabs},
-		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
-		{Key: constants.HelpKeyTab, Desc: constants.HelpDescFocus},
-		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
-	})
-}
-
 // WizardHelp returns wizard navigation help
 func WizardHelp() string {
 	return FooterHelp([]HelpItem{

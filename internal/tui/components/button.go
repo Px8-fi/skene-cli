@@ -129,17 +129,6 @@ func interleave(items []string, sep string) []string {
 	return result
 }
 
-// NavigationButtons creates Back/Next button group
-func NavigationButtons(backActive bool) *ButtonGroup {
-	bg := NewButtonGroup("Back", "Next")
-	if backActive {
-		bg.SetActiveIndex(0)
-	} else {
-		bg.SetActiveIndex(1)
-	}
-	return bg
-}
-
 // YesNoButtons creates Yes/No button group
 func YesNoButtons(yesActive bool) *ButtonGroup {
 	bg := NewButtonGroup("Yes", "No")

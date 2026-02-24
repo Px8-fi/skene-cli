@@ -265,7 +265,8 @@ func (v *APIKeyView) renderContent(width int) string {
 	elements = append(elements, "")
 
 	if urlHint != "" {
-		elements = append(elements, styles.Muted.Render(urlHint), "")
+		elements = append(elements, lipgloss.NewStyle().
+			Foreground(styles.MidGray).Width(width-8).Render(urlHint), "")
 	}
 
 	elements = append(elements, apiKeyLabel, inputField)
@@ -286,7 +287,8 @@ func (v *APIKeyView) renderContent(width int) string {
 	// Error message
 	if v.error != "" {
 		elements = append(elements, "")
-		elements = append(elements, styles.Error.Render("✗ "+v.error))
+		elements = append(elements, lipgloss.NewStyle().
+			Foreground(styles.Coral).Width(width-8).Render("✗ "+v.error))
 		if v.retryCount > 0 {
 			elements = append(elements, styles.Muted.Render(fmt.Sprintf("  Attempt %d", v.retryCount+1)))
 		}

@@ -153,52 +153,8 @@ func (cs *CallbackServer) handleCallback(w http.ResponseWriter, r *http.Request)
 	}
 	cs.mu.Unlock()
 
-	// Return a success page that tells the user they can close the window
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// Return a simple success response
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, successHTML)
+	fmt.Fprint(w, "Authentication complete. You can close this window.")
 }
-
-const successHTML = `<!DOCTYPE html>
-<html>
-<head>
-  <title>Skene - Authentication Complete</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0a0a0a;
-      color: #e0e0e0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-    }
-    .container {
-      text-align: center;
-      padding: 3rem;
-    }
-    .checkmark {
-      font-size: 4rem;
-      margin-bottom: 1.5rem;
-    }
-    h1 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      margin-bottom: 0.75rem;
-      color: #22c55e;
-    }
-    p {
-      color: #888;
-      font-size: 1rem;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="checkmark">&#10003;</div>
-    <h1>All done!</h1>
-    <p>You can close this window and return to the <strong>SKENE CLI</strong>.</p>
-  </div>
-</body>
-</html>`

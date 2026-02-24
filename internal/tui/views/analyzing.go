@@ -28,22 +28,18 @@ type AnalyzingView struct {
 	failed      bool
 	done        bool
 	failMessage string
-	currentIdx int
+	currentIdx  int
+
+	promptActive      bool
+	promptQuestion    string
+	promptOptions     []string
+	promptSelectedIdx int
 }
 
 // NewAnalyzingView creates a new analysis progress view
 func NewAnalyzingView() *AnalyzingView {
-	phases := []AnalysisPhase{
-		{Name: constants.PhaseScanCodebase, Active: true},
-		{Name: constants.PhaseDetectFeatures, Active: false},
-		{Name: constants.PhaseGrowthLoops, Active: false},
-		{Name: constants.PhaseMonetisation, Active: false},
-		{Name: constants.PhaseOpportunities, Active: false},
-		{Name: constants.PhaseGenerateDocs, Active: false},
-	}
-
 	return &AnalyzingView{
-		phases:   phases,
+		phases:   []AnalysisPhase{},
 		header:   components.NewTitleHeader(constants.StepNameAnalyzing),
 		spinner:  components.NewSpinner(),
 		terminal: components.NewTerminalOutput(14, 300),
@@ -82,7 +78,16 @@ func (v *AnalyzingView) TickSpinner() {
 }
 
 // UpdatePhase updates a phase's progress and logs the message to terminal
+// Legacy method kept for backward compatibility with NextStepOutputMsg
 func (v *AnalyzingView) UpdatePhase(index int, progress float64, message string) {
+	// For generic output messages (index == -1), just log to terminal
+	if index == -1 {
+		if message != "" {
+			v.terminal.AddLine(message)
+		}
+		return
+	}
+	// For valid indices, update existing phase (legacy support)
 	if index >= 0 && index < len(v.phases) {
 		v.phases[index].Progress = progress
 		v.phases[index].Active = progress < 1.0
@@ -96,6 +101,53 @@ func (v *AnalyzingView) UpdatePhase(index int, progress float64, message string)
 			}
 		}
 	}
+	// Log the message to terminal output
+	if message != "" {
+		v.terminal.AddLine(message)
+	}
+}
+
+// UpdatePhaseByName updates or creates a phase by name
+func (v *AnalyzingView) UpdatePhaseByName(phaseName string, progress float64, message string) {
+	// Find existing phase or create new one
+	var phase *AnalysisPhase
+	var phaseIdx int
+	found := false
+	for i := range v.phases {
+		if v.phases[i].Name == phaseName {
+			phase = &v.phases[i]
+			phaseIdx = i
+			found = true
+			break
+		}
+	}
+	
+	if !found {
+		// Create new phase
+		v.phases = append(v.phases, AnalysisPhase{
+			Name:     phaseName,
+			Progress: progress,
+			Active:   progress < 1.0,
+			Done:     progress >= 1.0,
+		})
+		phaseIdx = len(v.phases) - 1
+		phase = &v.phases[phaseIdx]
+	} else {
+		// Update existing phase
+		phase.Progress = progress
+		phase.Active = progress < 1.0
+		phase.Done = progress >= 1.0
+	}
+	
+	// Deactivate all other phases
+	for i := range v.phases {
+		if i != phaseIdx {
+			v.phases[i].Active = false
+		}
+	}
+	
+	v.currentIdx = phaseIdx
+	
 	// Log the message to terminal output
 	if message != "" {
 		v.terminal.AddLine(message)
@@ -150,6 +202,66 @@ func (v *AnalyzingView) HasFailed() bool {
 	return v.failed
 }
 
+// ShowPrompt displays an interactive prompt with selectable options
+func (v *AnalyzingView) ShowPrompt(question string, options []string) {
+	v.promptActive = true
+	v.promptQuestion = question
+	v.promptOptions = options
+	v.promptSelectedIdx = 0
+}
+
+// DismissPrompt hides the interactive prompt
+func (v *AnalyzingView) DismissPrompt() {
+	v.promptActive = false
+	v.promptQuestion = ""
+	v.promptOptions = nil
+	v.promptSelectedIdx = 0
+}
+
+// IsPromptActive returns true if an interactive prompt is showing
+func (v *AnalyzingView) IsPromptActive() bool {
+	return v.promptActive
+}
+
+// HandlePromptUp moves selection up in the prompt
+func (v *AnalyzingView) HandlePromptUp() {
+	if v.promptSelectedIdx > 0 {
+		v.promptSelectedIdx--
+	}
+}
+
+// HandlePromptDown moves selection down in the prompt
+func (v *AnalyzingView) HandlePromptDown() {
+	if v.promptSelectedIdx < len(v.promptOptions)-1 {
+		v.promptSelectedIdx++
+	}
+}
+
+// GetSelectedOptionIndex returns the 1-based index of the selected prompt option
+func (v *AnalyzingView) GetSelectedOptionIndex() int {
+	return v.promptSelectedIdx + 1
+}
+
+// ScrollUp scrolls the terminal output up
+func (v *AnalyzingView) ScrollUp(n int) {
+	v.terminal.ScrollUp(n)
+}
+
+// ScrollDown scrolls the terminal output down
+func (v *AnalyzingView) ScrollDown(n int) {
+	v.terminal.ScrollDown(n)
+}
+
+// GetCurrentPhase returns the current active phase name, or empty string if none
+func (v *AnalyzingView) GetCurrentPhase() string {
+	for _, p := range v.phases {
+		if p.Active {
+			return p.Name
+		}
+	}
+	return ""
+}
+
 // Render the analyzing view
 func (v *AnalyzingView) Render() string {
 	sectionWidth := v.width - 20
@@ -168,7 +280,10 @@ func (v *AnalyzingView) Render() string {
 	if v.failed {
 		statusLine = styles.Error.Render("✗ " + constants.AnalyzingFailed)
 		if v.failMessage != "" {
-			statusLine += "\n" + styles.Muted.Render("  "+v.failMessage)
+			statusLine += "\n" + lipgloss.NewStyle().
+				Foreground(styles.MidGray).
+				Width(sectionWidth).
+				Render("  "+v.failMessage)
 		}
 	} else if v.done {
 		statusLine = styles.SuccessText.Render("✓ " + constants.AnalyzingComplete)
@@ -192,15 +307,29 @@ func (v *AnalyzingView) Render() string {
 	// Terminal output
 	termOutput := v.terminal.Render(sectionWidth)
 
+	// Prompt overlay (if active)
+	var promptSection string
+	if v.promptActive && len(v.promptOptions) > 0 {
+		promptSection = v.renderPrompt(sectionWidth)
+	}
+
 	// Footer
 	var footerContent string
-	if v.done || v.failed {
+	if v.promptActive {
 		footerContent = components.FooterHelp([]components.HelpItem{
+			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescNavigate},
+			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSelect},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
+		})
+	} else if v.done || v.failed {
+		footerContent = components.FooterHelp([]components.HelpItem{
+			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		})
 	} else {
 		footerContent = components.FooterHelp([]components.HelpItem{
+			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescCancel},
 			{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
@@ -212,13 +341,19 @@ func (v *AnalyzingView) Render() string {
 		Render(footerContent)
 
 	// Combine
-	content := lipgloss.JoinVertical(
-		lipgloss.Left,
+	contentParts := []string{
 		wizHeader,
 		"",
 		statusLine,
 		"",
 		termOutput,
+	}
+	if promptSection != "" {
+		contentParts = append(contentParts, "", promptSection)
+	}
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		contentParts...,
 	)
 
 	padded := lipgloss.NewStyle().PaddingTop(2).Render(content)
@@ -234,15 +369,50 @@ func (v *AnalyzingView) Render() string {
 	return centered + "\n" + footer
 }
 
+func (v *AnalyzingView) renderPrompt(width int) string {
+	question := styles.Accent.Render(v.promptQuestion)
+
+	var items []string
+	for i, opt := range v.promptOptions {
+		if i == v.promptSelectedIdx {
+			items = append(items, styles.ListItemSelected.Render(opt))
+		} else {
+			items = append(items, styles.ListItem.Render(opt))
+		}
+		if i < len(v.promptOptions)-1 {
+			items = append(items, "")
+		}
+	}
+
+	list := lipgloss.JoinVertical(lipgloss.Left, items...)
+	inner := lipgloss.JoinVertical(lipgloss.Left, question, "", list)
+
+	return lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		BorderForeground(styles.MidGray).
+		Padding(0, 1).
+		Width(width - 2).
+		Render(inner)
+}
+
 // GetHelpItems returns context-specific help
 func (v *AnalyzingView) GetHelpItems() []components.HelpItem {
+	if v.promptActive {
+		return []components.HelpItem{
+			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescNavigate},
+			{Key: constants.HelpKeyEnter, Desc: constants.HelpDescSelect},
+			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
+		}
+	}
 	if v.done || v.failed {
 		return []components.HelpItem{
+			{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
 			{Key: constants.HelpKeyEsc, Desc: constants.HelpDescGoBack},
 			{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 		}
 	}
 	return []components.HelpItem{
+		{Key: constants.HelpKeyUpDown, Desc: constants.HelpDescScroll},
 		{Key: constants.HelpKeyEsc, Desc: constants.HelpDescCancel},
 		{Key: constants.HelpKeyG, Desc: constants.HelpDescPlayMiniGame},
 		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},

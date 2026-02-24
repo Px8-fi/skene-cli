@@ -122,7 +122,10 @@ func (v *ErrorView) Render() string {
 
 	// Suggestion box
 	suggestionHeader := styles.SectionHeader.Render("Suggested Fix")
-	suggestion := styles.SuccessText.Render("> " + v.error.Suggestion)
+	suggestion := lipgloss.NewStyle().
+		Foreground(styles.Success).
+		Width(sectionWidth - 12).
+		Render("> " + v.error.Suggestion)
 
 	suggestionContent := lipgloss.JoinVertical(
 		lipgloss.Left,

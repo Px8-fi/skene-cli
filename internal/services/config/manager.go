@@ -274,31 +274,32 @@ func GetProviders() []Provider {
 				{ID: "gemini-2.5-flash", Name: "gemini-2.5-flash", Description: "Balanced performance"},
 			},
 		},
-		{
-			ID:          "ollama",
-			Name:        "Ollama (Local)",
-			Description: "Run models locally with Ollama",
-			RequiresKey: false,
-			IsLocal:     true,
-			DefaultBase: constants.OllamaDefaultBase,
-			Models: []Model{
-				{ID: "llama3.3", Name: "llama3.3", Description: "Meta's Llama 3.3"},
-				{ID: "mistral", Name: "mistral", Description: "Mistral 7B"},
-				{ID: "codellama", Name: "codellama", Description: "Code-focused Llama"},
-				{ID: "deepseek-r1", Name: "deepseek-r1", Description: "DeepSeek R1 reasoning"},
-			},
-		},
-		{
-			ID:          "lmstudio",
-			Name:        "LM Studio (Local)",
-			Description: "Run models locally with LM Studio",
-			RequiresKey: false,
-			IsLocal:     true,
-			DefaultBase: constants.LMStudioDefaultBase,
-			Models: []Model{
-				{ID: "auto", Name: "Currently loaded model", Description: "Uses whatever model is loaded in LM Studio"},
-			},
-		},
+		// TODO: re-enable local model providers after testing
+		// {
+		// 	ID:          "ollama",
+		// 	Name:        "Ollama (Local)",
+		// 	Description: "Run models locally with Ollama",
+		// 	RequiresKey: false,
+		// 	IsLocal:     true,
+		// 	DefaultBase: constants.OllamaDefaultBase,
+		// 	Models: []Model{
+		// 		{ID: "llama3.3", Name: "llama3.3", Description: "Meta's Llama 3.3"},
+		// 		{ID: "mistral", Name: "mistral", Description: "Mistral 7B"},
+		// 		{ID: "codellama", Name: "codellama", Description: "Code-focused Llama"},
+		// 		{ID: "deepseek-r1", Name: "deepseek-r1", Description: "DeepSeek R1 reasoning"},
+		// 	},
+		// },
+		// {
+		// 	ID:          "lmstudio",
+		// 	Name:        "LM Studio (Local)",
+		// 	Description: "Run models locally with LM Studio",
+		// 	RequiresKey: false,
+		// 	IsLocal:     true,
+		// 	DefaultBase: constants.LMStudioDefaultBase,
+		// 	Models: []Model{
+		// 		{ID: "auto", Name: "Currently loaded model", Description: "Uses whatever model is loaded in LM Studio"},
+		// 	},
+		// },
 		{
 			ID:          "generic",
 			Name:        "Other (OpenAI-compatible)",

@@ -77,6 +77,21 @@ func (v *ProjectDirView) SetSize(width, height int) {
 	v.width = width
 	v.height = height
 	v.header.SetWidth(width)
+	
+	// Update text input width to match available section width
+	sectionWidth := width - 20
+	if sectionWidth < 60 {
+		sectionWidth = 60
+	}
+	if sectionWidth > 80 {
+		sectionWidth = 80
+	}
+	// Account for box padding (typically 2-4 chars on each side)
+	inputWidth := sectionWidth - 4
+	if inputWidth < 50 {
+		inputWidth = 50
+	}
+	v.textInput.Width = inputWidth
 }
 
 // Update handles text input updates
@@ -473,7 +488,9 @@ func (v *ProjectDirView) Render() string {
 func (v *ProjectDirView) renderExistingAnalysisChoice(wizHeader string, width int) string {
 	header := styles.SectionHeader.Render(constants.ProjectDirExistingHeader)
 	msg := styles.Body.Render(constants.ProjectDirExistingMsg)
-	path := styles.Muted.Render("Found: " + filepath.Join(v.GetProjectDir(), constants.OutputDirName) + "/")
+	path := lipgloss.NewStyle().
+		Foreground(styles.MidGray).Width(width-8).
+		Render("Found: " + filepath.Join(v.GetProjectDir(), constants.OutputDirName) + "/")
 	question := styles.Accent.Render(constants.ProjectDirExistingQ)
 
 	buttons := lipgloss.NewStyle().
@@ -538,7 +555,7 @@ func (v *ProjectDirView) renderDirSection(width int) string {
 	if !v.isValid && v.validMsg != "" {
 		validationLine = styles.Error.Render("X " + v.validMsg)
 	} else if v.warningMsg != "" {
-		validationLine = lipgloss.NewStyle().Foreground(styles.Warning).Render("! " + v.warningMsg)
+		validationLine = lipgloss.NewStyle().Foreground(styles.Warning).Width(width-8).Render("! " + v.warningMsg)
 	} else if v.isValid && v.hasSkeneContext {
 		validationLine = styles.SuccessText.Render(constants.ProjectDirValidExisting)
 	} else if v.isValid {

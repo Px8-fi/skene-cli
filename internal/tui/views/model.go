@@ -120,6 +120,7 @@ func (v *ModelView) renderModelList(width int) string {
 	count := styles.Muted.Render(fmt.Sprintf("%d / %d models", v.selectedIndex+1, len(v.provider.Models)))
 
 	// Model list
+	descWidth := width - 8
 	var items []string
 	for i, m := range v.provider.Models {
 		isSelected := i == v.selectedIndex
@@ -127,11 +128,11 @@ func (v *ModelView) renderModelList(width int) string {
 		var item string
 		if isSelected {
 			name := styles.ListItemSelected.Render(m.Name)
-			desc := styles.ListDescriptionSelected.Render(m.Description)
+			desc := lipgloss.NewStyle().Foreground(styles.Sand).PaddingLeft(2).Width(descWidth).Render(m.Description)
 			item = name + "\n" + desc
 		} else {
 			name := styles.ListItem.Render(m.Name)
-			desc := styles.ListDescription.Render(m.Description)
+			desc := lipgloss.NewStyle().Foreground(styles.MidGray).PaddingLeft(2).Width(descWidth).Render(m.Description)
 			item = name + "\n" + desc
 		}
 		items = append(items, item)

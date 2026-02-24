@@ -67,7 +67,8 @@ func NewResultsViewWithContent(growthPlan, manifest, growthTemplate string) *Res
 		v.contents[constants.TabGrowthPlan] = constants.PlaceholderGrowthPlan
 	}
 
-	v.viewport.SetContent(v.contents[constants.TabGrowthManifest])
+	wrapped := lipgloss.NewStyle().Width(v.viewport.Width).Render(v.contents[constants.TabGrowthManifest])
+	v.viewport.SetContent(wrapped)
 
 	return v
 }
@@ -93,6 +94,7 @@ func (v *ResultsView) SetSize(width, height int) {
 
 	v.viewport.Width = vpWidth
 	v.viewport.Height = vpHeight
+	v.updateContent()
 }
 
 // HandleLeft moves tab left
@@ -137,7 +139,8 @@ func (v *ResultsView) HandleTab() {
 func (v *ResultsView) updateContent() {
 	tabName := v.tabs[v.activeTab]
 	if content, ok := v.contents[tabName]; ok {
-		v.viewport.SetContent(content)
+		wrapped := lipgloss.NewStyle().Width(v.viewport.Width).Render(content)
+		v.viewport.SetContent(wrapped)
 		v.viewport.GotoTop()
 	}
 }

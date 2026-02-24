@@ -76,6 +76,13 @@ type NextStepDoneMsg struct {
 	Error error
 }
 
+// PromptMsg is sent when uvx asks an interactive question
+type PromptMsg struct {
+	Question string
+	Options  []string
+	Response chan string
+}
+
 // LocalModelDetectMsg is sent with local model detection results
 type LocalModelDetectMsg struct {
 	Models []string
@@ -149,6 +156,9 @@ type App struct {
 
 	// Error state
 	currentError *views.ErrorInfo
+
+	// Interactive prompt state
+	pendingPromptResponse chan string
 
 	// Program reference for sending messages from background tasks
 	program *tea.Program
@@ -263,6 +273,24 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Update game if active
 		if a.state == StateGame && a.game != nil {
 			a.game.Update()
+			// Tick progress spinner if showing progress
+			a.game.TickProgressSpinner()
+			// Update progress info from analyzing view
+			if a.analyzingView != nil {
+				if a.analyzingView.IsDone() {
+					if a.analyzingView.HasFailed() {
+						a.game.SetProgressInfo("", true, true)
+					} else {
+						a.game.SetProgressInfo("", true, false)
+					}
+				} else {
+					phase := a.analyzingView.GetCurrentPhase()
+					if phase == "" {
+						phase = "Analyzing..."
+					}
+					a.game.SetProgressInfo(phase, false, false)
+				}
+			}
 		}
 
 		cmds = append(cmds, tick())
@@ -284,6 +312,14 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		err := msg.Error
 		if err == nil && msg.Result != nil && msg.Result.Error != nil {
 			err = msg.Result.Error
+		}
+		// Update game progress indicator
+		if a.state == StateGame && a.game != nil {
+			if err != nil {
+				a.game.SetProgressInfo("", true, true)
+			} else {
+				a.game.SetProgressInfo("", true, false)
+			}
 		}
 		if err != nil {
 			suggestion := analysisErrorSuggestion(err)
@@ -311,13 +347,28 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case AnalysisPhaseMsg:
 		if a.analyzingView != nil {
-			phase := int(msg.Update.Phase)
-			a.analyzingView.UpdatePhase(phase, msg.Update.Progress, msg.Update.Message)
+			// Use phase name from enum instead of index
+			phaseName := msg.Update.Phase.String()
+			a.analyzingView.UpdatePhaseByName(phaseName, msg.Update.Progress, msg.Update.Message)
+		}
+		// Update game progress if game is active
+		if a.state == StateGame && a.game != nil && a.analyzingView != nil {
+			currentPhase := a.analyzingView.GetCurrentPhase()
+			if currentPhase == "" {
+				currentPhase = "Analyzing..."
+			}
+			a.game.SetProgressInfo(currentPhase, false, false)
 		}
 
 	case NextStepOutputMsg:
 		if a.analyzingView != nil {
 			a.analyzingView.UpdatePhase(-1, 0, msg.Line)
+		}
+
+	case PromptMsg:
+		if a.analyzingView != nil {
+			a.analyzingView.ShowPrompt(msg.Question, msg.Options)
+			a.pendingPromptResponse = msg.Response
 		}
 
 	case NextStepDoneMsg:
@@ -326,6 +377,16 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				a.analyzingView.SetCommandFailed(msg.Error.Error())
 			} else {
 				a.analyzingView.SetDone()
+			}
+		}
+		// Update game progress if game is active
+		if a.state == StateGame && a.game != nil && a.analyzingView != nil {
+			if a.analyzingView.IsDone() {
+				if a.analyzingView.HasFailed() {
+					a.game.SetProgressInfo("", true, true)
+				} else {
+					a.game.SetProgressInfo("", true, false)
+				}
 			}
 		}
 
@@ -682,9 +743,33 @@ func (a *App) handleAnalysisConfigKeys(key string) tea.Cmd {
 }
 
 func (a *App) handleAnalyzingKeys(key string) tea.Cmd {
+	if a.analyzingView != nil && a.analyzingView.IsPromptActive() {
+		switch key {
+		case "up", "k":
+			a.analyzingView.HandlePromptUp()
+		case "down", "j":
+			a.analyzingView.HandlePromptDown()
+		case "enter":
+			idx := a.analyzingView.GetSelectedOptionIndex()
+			a.analyzingView.DismissPrompt()
+			if a.pendingPromptResponse != nil {
+				a.pendingPromptResponse <- fmt.Sprintf("%d", idx)
+				a.pendingPromptResponse = nil
+			}
+		}
+		return nil
+	}
+
 	switch key {
+	case "up", "k":
+		if a.analyzingView != nil {
+			a.analyzingView.ScrollUp(3)
+		}
+	case "down", "j":
+		if a.analyzingView != nil {
+			a.analyzingView.ScrollDown(3)
+		}
 	case "g":
-		// Only allow game while running, not when done/failed
 		if a.analyzingView != nil && !a.analyzingView.IsDone() {
 			a.prevState = a.state
 			a.state = StateGame
@@ -694,6 +779,11 @@ func (a *App) handleAnalyzingKeys(key string) tea.Cmd {
 				a.game.Restart()
 			}
 			a.game.SetSize(60, 20)
+			currentPhase := a.analyzingView.GetCurrentPhase()
+			if currentPhase == "" {
+				currentPhase = "Analyzing..."
+			}
+			a.game.SetProgressInfo(currentPhase, false, false)
 			return game.GameTickCmd()
 		}
 	case "esc":
@@ -701,13 +791,10 @@ func (a *App) handleAnalyzingKeys(key string) tea.Cmd {
 			return nil
 		}
 		if a.analyzingView.HasFailed() {
-			// Failed: go back to the origin so the user can retry
 			a.navigateBackFromAnalyzing()
 		} else if a.analyzingView.IsDone() {
-			// Succeeded: go back to origin (next steps or analysis config)
 			a.navigateBackFromAnalyzing()
 		} else {
-			// Still running: cancel and go back
 			if a.cancelFunc != nil {
 				a.cancelFunc()
 				a.cancelFunc = nil
@@ -815,6 +902,10 @@ func (a *App) handleGameKeys(msg tea.KeyMsg) tea.Cmd {
 			a.game.Restart()
 		}
 	case "esc":
+		// Clear progress indicator when exiting game
+		if a.game != nil {
+			a.game.ClearProgressInfo()
+		}
 		a.state = a.prevState
 	}
 	return nil
@@ -1079,6 +1170,15 @@ func (a *App) startRealAnalysisCmd(p *tea.Program) tea.Cmd {
 				p.Send(AnalysisPhaseMsg{Update: update})
 			}
 		})
+		engine.SetPromptHandler(func(prompt growth.InteractivePrompt) {
+			if p != nil {
+				p.Send(PromptMsg{
+					Question: prompt.Question,
+					Options:  prompt.Options,
+					Response: prompt.Response,
+				})
+			}
+		})
 
 		result := engine.Run(ctx)
 		if result.Error != nil {
@@ -1109,6 +1209,15 @@ func (a *App) runEngineCommand(title string, command string) tea.Cmd {
 		engine := growth.NewEngine(cfg, func(update growth.PhaseUpdate) {
 			if p != nil {
 				p.Send(NextStepOutputMsg{Line: update.Message})
+			}
+		})
+		engine.SetPromptHandler(func(prompt growth.InteractivePrompt) {
+			if p != nil {
+				p.Send(PromptMsg{
+					Question: prompt.Question,
+					Options:  prompt.Options,
+					Response: prompt.Response,
+				})
 			}
 		})
 

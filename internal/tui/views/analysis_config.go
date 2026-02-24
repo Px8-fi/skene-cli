@@ -93,11 +93,15 @@ func (v *AnalysisConfigView) Render() string {
 func (v *AnalysisConfigView) renderSummary(width int) string {
 	header := styles.SectionHeader.Render(constants.AnalysisConfigSummary)
 
+	valueWidth := width - 20
+	if valueWidth < 30 {
+		valueWidth = 30
+	}
 	rows := []string{
-		styles.Label.Render("Provider:   ") + styles.Body.Render(v.providerName),
-		styles.Label.Render("Model:      ") + styles.Body.Render(v.modelName),
-		styles.Label.Render("Directory:  ") + styles.Body.Render(v.projectDir),
-		styles.Label.Render("Output:     ") + styles.Body.Render(constants.DefaultOutputDir+"/"),
+		styles.Label.Render("Provider:   ") + lipgloss.NewStyle().Foreground(styles.White).Width(valueWidth).Render(v.providerName),
+		styles.Label.Render("Model:      ") + lipgloss.NewStyle().Foreground(styles.White).Width(valueWidth).Render(v.modelName),
+		styles.Label.Render("Directory:  ") + lipgloss.NewStyle().Foreground(styles.White).Width(valueWidth).Render(v.projectDir),
+		styles.Label.Render("Output:     ") + lipgloss.NewStyle().Foreground(styles.White).Width(valueWidth).Render(constants.DefaultOutputDir+"/"),
 	}
 
 	content := lipgloss.JoinVertical(

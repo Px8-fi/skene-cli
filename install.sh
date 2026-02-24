@@ -1,98 +1,116 @@
-#!/bin/bash
-set -e
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+#!/usr/bin/env bash
+set -euo pipefail
 
 REPO="Px8-fi/skene-cli"
-BINARY_NAME="skene"
-INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
-VERSION="${VERSION:-v030}"
+BINARY="skene"
+INSTALL_DIR="/usr/local/bin"
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+info()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
+err()   { printf '\033[1;31mError:\033[0m %s\n' "$*" >&2; exit 1; }
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || err "'$1' is required but not installed."
+}
+
+# ---------------------------------------------------------------------------
+# Detect OS / Arch
+# ---------------------------------------------------------------------------
 
 detect_platform() {
-    local os arch
-    case "$(uname -s)" in
-        Linux*)   os="linux" ;;
-        Darwin*)  os="darwin" ;;
-        CYGWIN*|MINGW*|MSYS*) os="windows" ;;
-        *) echo -e "${RED}Error: Unsupported OS: $(uname -s)${NC}" >&2; exit 1 ;;
-    esac
-    case "$(uname -m)" in
-        x86_64|amd64)  arch="amd64" ;;
-        arm64|aarch64) arch="arm64" ;;
-        *) echo -e "${RED}Error: Unsupported architecture: $(uname -m)${NC}" >&2; exit 1 ;;
-    esac
-    echo "${os}-${arch}"
+  OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  ARCH="$(uname -m)"
+
+  case "$OS" in
+    linux)  OS=linux ;;
+    darwin) OS=darwin ;;
+    *)      err "Unsupported OS: $OS" ;;
+  esac
+
+  case "$ARCH" in
+    x86_64|amd64)   ARCH=amd64 ;;
+    arm64|aarch64)   ARCH=arm64 ;;
+    *)               err "Unsupported architecture: $ARCH" ;;
+  esac
 }
 
-download_binary() {
-    local platform="$1"
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    local asset="${BINARY_NAME}-${platform}"
-    local url="https://github.com/${REPO}/releases/download/${VERSION}/${asset}.tar.gz"
+# ---------------------------------------------------------------------------
+# Resolve latest version (or use VERSION env override)
+# ---------------------------------------------------------------------------
 
-    echo -e "${BLUE}Downloading ${BINARY_NAME} ${VERSION} for ${platform}...${NC}"
-    if ! curl -fSL -o "${tmpdir}/${asset}.tar.gz" "$url"; then
-        rm -rf "$tmpdir"
-        echo -e "${RED}Error: Download failed. Check https://github.com/${REPO}/releases${NC}" >&2
-        exit 1
-    fi
+resolve_version() {
+  if [ -n "${VERSION:-}" ]; then
+    TAG="$VERSION"
+    return
+  fi
 
-    tar -xzf "${tmpdir}/${asset}.tar.gz" -C "$tmpdir"
-    mv "${tmpdir}/${asset}" "${tmpdir}/${BINARY_NAME}"
-    chmod +x "${tmpdir}/${BINARY_NAME}"
+  need curl
+  TAG=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
+        | grep '"tag_name"' | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
 
-    # Strip macOS quarantine flag
-    xattr -d com.apple.quarantine "${tmpdir}/${BINARY_NAME}" 2>/dev/null || true
-
-    echo "${tmpdir}/${BINARY_NAME}"
+  [ -n "$TAG" ] || err "Could not determine latest release. Set VERSION=vXXX manually."
 }
+
+# ---------------------------------------------------------------------------
+# Download & install
+# ---------------------------------------------------------------------------
 
 install_binary() {
-    local binary="$1"
+  local asset="${BINARY}-${OS}-${ARCH}"
+  local url="https://github.com/${REPO}/releases/download/${TAG}/${asset}.tar.gz"
+  local tmpdir
+  tmpdir="$(mktemp -d)"
 
-    if [ ! -d "$INSTALL_DIR" ]; then
-        echo -e "${YELLOW}Creating ${INSTALL_DIR}...${NC}"
-        if [ -w "$(dirname "$INSTALL_DIR")" ]; then
-            mkdir -p "$INSTALL_DIR"
-        else
-            sudo mkdir -p "$INSTALL_DIR"
-        fi
-    fi
+  info "Downloading ${BINARY} ${TAG} for ${OS}/${ARCH}…"
+  curl -fSL --progress-bar -o "${tmpdir}/${asset}.tar.gz" "$url" \
+    || err "Download failed. Check that release ${TAG} exists at https://github.com/${REPO}/releases"
 
-    echo -e "${YELLOW}Installing to ${INSTALL_DIR}/${BINARY_NAME}...${NC}"
-    if [ -w "$INSTALL_DIR" ]; then
-        cp "$binary" "${INSTALL_DIR}/${BINARY_NAME}"
-    else
-        sudo cp "$binary" "${INSTALL_DIR}/${BINARY_NAME}"
-    fi
+  tar -xzf "${tmpdir}/${asset}.tar.gz" -C "$tmpdir"
+  chmod +x "${tmpdir}/${asset}"
 
-    rm -f "$binary"
-    rmdir "$(dirname "$binary")" 2>/dev/null || true
+  # macOS Gatekeeper bypass
+  if [ "$OS" = "darwin" ]; then
+    xattr -d com.apple.quarantine "${tmpdir}/${asset}" 2>/dev/null || true
+    # Ad-hoc code sign so Gatekeeper treats it as a known binary
+    codesign --force --sign - "${tmpdir}/${asset}" 2>/dev/null || true
+  fi
+
+  info "Installing to ${INSTALL_DIR}/${BINARY} …"
+  if [ -w "$INSTALL_DIR" ]; then
+    mv "${tmpdir}/${asset}" "${INSTALL_DIR}/${BINARY}"
+  else
+    sudo mv "${tmpdir}/${asset}" "${INSTALL_DIR}/${BINARY}"
+  fi
+
+  rm -rf "$tmpdir"
 }
+
+# ---------------------------------------------------------------------------
+# Verify
+# ---------------------------------------------------------------------------
+
+verify() {
+  if command -v "$BINARY" >/dev/null 2>&1; then
+    info "Installed successfully! Run \`${BINARY}\` to get started."
+  else
+    info "Binary installed to ${INSTALL_DIR}/${BINARY}."
+    info "Make sure ${INSTALL_DIR} is in your PATH."
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 main() {
-    echo -e "${GREEN}Installing ${BINARY_NAME}...${NC}"
-
-    local platform
-    platform=$(detect_platform)
-    echo -e "Detected platform: ${platform}"
-
-    local binary
-    binary=$(download_binary "$platform")
-    install_binary "$binary"
-
-    if command -v "$BINARY_NAME" >/dev/null 2>&1; then
-        echo -e "${GREEN}✓ Installed ${BINARY_NAME} to ${INSTALL_DIR}/${BINARY_NAME}${NC}"
-        echo -e "  Run '${BINARY_NAME}' to get started"
-    else
-        echo -e "${GREEN}✓ Installed to ${INSTALL_DIR}/${BINARY_NAME}${NC}"
-        echo -e "${YELLOW}⚠ ${INSTALL_DIR} may not be in your PATH${NC}"
-    fi
+  info "Skene CLI Installer"
+  detect_platform
+  resolve_version
+  install_binary
+  verify
 }
 
-main "$@"
+main

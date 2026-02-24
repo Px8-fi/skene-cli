@@ -75,7 +75,6 @@ func (v *WelcomeView) Render() string {
 	// Footer help
 	footer := components.FooterHelp([]components.HelpItem{
 		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescStart},
-		{Key: constants.HelpKeyHelp, Desc: constants.HelpDescHelp},
 		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	})
 
@@ -114,7 +113,6 @@ func (v *WelcomeView) Render() string {
 func (v *WelcomeView) GetHelpItems() []components.HelpItem {
 	return []components.HelpItem{
 		{Key: constants.HelpKeyEnter, Desc: constants.HelpDescStart},
-		{Key: constants.HelpKeyHelp, Desc: constants.HelpDescToggleHelp},
 		{Key: constants.HelpKeyCtrlC, Desc: constants.HelpDescQuit},
 	}
 }

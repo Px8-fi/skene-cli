@@ -131,6 +131,7 @@ func (v *ProviderView) renderProviderList(width int) string {
 		endIdx = len(v.providers)
 	}
 
+	descWidth := width - 8
 	for i := v.scrollOffset; i < endIdx; i++ {
 		p := v.providers[i]
 		isSelected := i == v.selectedIndex
@@ -138,20 +139,20 @@ func (v *ProviderView) renderProviderList(width int) string {
 		var item string
 		if isSelected {
 			name := styles.ListItemSelected.Render(p.Name)
-			desc := styles.ListDescriptionSelected.Render(p.Description)
+			desc := lipgloss.NewStyle().Foreground(styles.Sand).PaddingLeft(2).Width(descWidth).Render(p.Description)
 			item = name + "\n" + desc
 		} else {
 			name := styles.ListItem.Render(p.Name)
-			desc := styles.ListDescription.Render(p.Description)
+			desc := lipgloss.NewStyle().Foreground(styles.MidGray).PaddingLeft(2).Width(descWidth).Render(p.Description)
 			item = name + "\n" + desc
 		}
 
 		// Add badges
 		if p.IsLocal {
-			item += "  " + styles.Muted.Render("[local]")
+			item += "\n" + lipgloss.NewStyle().Foreground(styles.MidGray).PaddingLeft(2).Render("[local]")
 		}
 		if p.IsGeneric {
-			item += "  " + styles.Muted.Render("[custom endpoint]")
+			item += "\n" + lipgloss.NewStyle().Foreground(styles.MidGray).PaddingLeft(2).Render("[custom endpoint]")
 		}
 
 		items = append(items, item)

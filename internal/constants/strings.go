@@ -2,18 +2,18 @@ package constants
 
 // Wizard step names
 const (
-	StepNameAIProvider      = "AI Provider"
-	StepNameSelectModel     = "Select Model"
-	StepNameAuthentication  = "Authentication"
-	StepNameLocalModelSetup = "Local Model Setup"
-	StepNameProjectDir      = "Project Directory"
-	StepNameProjectSetup    = "Project Setup"
-	StepNameAnalysisConfig  = "Analysis Configuration"
-	StepNameAnalyzing       = "Running Skene Growth Analysis"
+	StepNameAIProvider       = "AI Provider"
+	StepNameSelectModel      = "Select Model"
+	StepNameAuthentication   = "Authentication"
+	StepNameLocalModelSetup  = "Local Model Setup"
+	StepNameProjectDir       = "Project Directory"
+	StepNameProjectSetup     = "Project Setup"
+	StepNameAnalysisConfig   = "Analysis Configuration"
+	StepNameAnalyzing        = "Running Skene Growth Analysis"
 	StepNameAnalysingStepper = "Analysing"
-	StepNameResults         = "Analysis Results"
-	StepNameNextSteps       = "Next Steps"
-	StepCounterFormat       = "Step %d of %d"
+	StepNameResults          = "Analysis Results"
+	StepNameNextSteps        = "Next Steps"
+	StepCounterFormat        = "Step %d of %d"
 )
 
 // Dashboard tab names
@@ -113,7 +113,7 @@ var NextStepActions = []NextStepDef{
 	{
 		ID:          "exit",
 		Name:        "Exit",
-		Description: "Close Skene CLI",
+		Description: "Close Skene",
 		Command:     "",
 	},
 }
@@ -153,17 +153,6 @@ const (
 	AnthropicKeyFormat = "Invalid Anthropic API key format"
 )
 
-// System check view
-const (
-	SysCheckHeader    = "Checking prerequisites..."
-	SysCheckSettingUp = "Setting up uvx runtime..."
-	SysCheckFirstRun  = "This may take a moment on first run"
-	SysCheckRunning   = "Running system checks..."
-	SysCheckAllPassed = "All checks passed! Your system is ready."
-	SysCheckFailed    = "Failed to set up uvx runtime. Check your internet connection and try again."
-	SysCheckIDESent   = "Request sent to IDE!"
-)
-
 // Project directory view
 const (
 	ProjectDirHeader         = "Select project to analyze"
@@ -194,16 +183,8 @@ const (
 	AnalyzingDone     = "Done"
 )
 
-// Analysis phase names
-// TODO: Remove legacy phase code
-const (
-	PhaseScanCodebase   = "Scanning codebase"
-	PhaseDetectFeatures = "Detecting product features"
-	PhaseGrowthLoops    = "Growth loop analysis"
-	PhaseMonetisation   = "Monetisation analysis"
-	PhaseOpportunities  = "Opportunity modelling"
-	PhaseGenerateDocs   = "Generating manifests & docs"
-)
+// Analysis phase names are now defined in internal/services/growth/engine.go
+// as methods on the AnalysisPhase enum type
 
 // Error view
 const (
@@ -245,11 +226,11 @@ const (
 
 // Help descriptions
 const (
-	HelpDescNavigate         = "navigate"
-	HelpDescSelect           = "select"
-	HelpDescSelectOption     = "select option"
-	HelpDescSelectProvider   = "select provider"
-	HelpDescSelectModel      = "select model"
+	HelpDescNavigate       = "navigate"
+	HelpDescSelect         = "select"
+	HelpDescSelectOption   = "select option"
+	HelpDescSelectProvider = "select provider"
+	HelpDescSelectModel    = "select model"
 
 	HelpDescConfirm          = "confirm"
 	HelpDescConfirmSelection = "confirm selection"

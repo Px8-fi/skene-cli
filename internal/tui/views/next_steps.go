@@ -130,16 +130,17 @@ func (v *NextStepsView) Render() string {
 func (v *NextStepsView) renderActions(width int) string {
 	var items []string
 
+	descWidth := width - 8
 	for i, action := range v.actions {
 		isSelected := i == v.selectedIdx
 
 		var name, desc string
 		if isSelected {
 			name = styles.ListItemSelected.Render(action.Name)
-			desc = styles.ListDescriptionSelected.Render(action.Description)
+			desc = lipgloss.NewStyle().Foreground(styles.Sand).PaddingLeft(2).Width(descWidth).Render(action.Description)
 		} else {
 			name = styles.ListItem.Render(action.Name)
-			desc = styles.ListDescription.Render(action.Description)
+			desc = lipgloss.NewStyle().Foreground(styles.MidGray).PaddingLeft(2).Width(descWidth).Render(action.Description)
 		}
 
 		item := name + "\n" + desc
@@ -162,11 +163,11 @@ func (v *NextStepsView) renderCommandPreview(width int) string {
 	}
 
 	cmdLabel := styles.Muted.Render("Command: ")
-	cmdValue := styles.Accent.Render(action.Command)
+	cmdValue := lipgloss.NewStyle().
+		Foreground(styles.Amber).Width(width - 14).Render(action.Command)
 	preview := cmdLabel + cmdValue
 	return lipgloss.NewStyle().
 		Width(width).
-		Align(lipgloss.Center).
 		Render(preview)
 }
 

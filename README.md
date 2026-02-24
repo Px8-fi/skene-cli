@@ -1,4 +1,4 @@
-# Skene CLI
+# Skene
 
 A terminal interface for [Skene Growth](https://github.com/SkeneTechnologies/skene-growth). Guides you through selecting a repository, choosing an AI provider, and running growth analysis — all from the terminal.
 
@@ -6,9 +6,9 @@ Built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea).
 
 ## What It Does
 
-Skene CLI is the interactive front-end for **Skene Growth** — a PLG analysis toolkit that detects your tech stack, discovers growth features, identifies revenue leakage, and generates growth plans.
+Skene terminal is the interactive front-end for **Skene Growth** — a PLG analysis toolkit that detects your tech stack, discovers growth features, identifies revenue leakage, and generates growth plans.
 
-The CLI itself does **not** perform any analysis. It orchestrates `uvx skene-growth` in your selected repository directory and displays the results.
+The tool itself does **not** perform any analysis. It orchestrates `uvx skene-growth` in your selected repository directory and displays the results.
 
 ## Features
 
@@ -30,10 +30,24 @@ None. The CLI automatically downloads the [uv](https://docs.astral.sh/uv/) runti
 
 ## Installation
 
+### Quick Install (recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh | bash
+```
+
+This downloads the latest release binary for your platform and installs it to `/usr/local/bin`.
+
+To install a specific version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Px8-fi/skene-cli/main/install.sh | VERSION=v030 bash
+```
+
 ### Clone and Run
 
 ```bash
-git clone https://github.com/SkeneTechnologies/skene-cli.git
+git clone https://github.com/Px8-fi/skene-cli.git
 cd skene-cli
 make build
 make run
@@ -42,7 +56,7 @@ make run
 ### Build from Source (requires Go 1.22+)
 
 ```bash
-git clone https://github.com/SkeneTechnologies/skene-cli.git
+git clone https://github.com/Px8-fi/skene-cli.git
 cd skene-cli
 make install   # download dependencies
 make build

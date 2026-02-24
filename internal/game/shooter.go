@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"math/rand"
+	"skene/internal/tui/components"
 	"skene/internal/tui/styles"
 	"strings"
 	"time"
@@ -48,24 +49,33 @@ type Game struct {
 	spawnRate    time.Duration
 	tickCount    int
 	enemySpeed   int // enemies move every N ticks
+	
+	// Analysis progress indicator
+	showProgress    bool
+	progressPhase   string
+	progressDone    bool
+	progressFailed  bool
+	progressSpinner *components.Spinner
 }
 
 // NewGame creates a new game instance
 func NewGame(width, height int) *Game {
 	g := &Game{
-		width:      width,
-		height:     height,
-		enemies:    make([]*Entity, 0),
-		bullets:    make([]*Entity, 0),
-		powerUps:   make([]*Entity, 0),
-		score:      0,
-		lives:      3,
-		level:      1,
-		gameOver:   false,
-		paused:     false,
-		lastSpawn:  time.Now(),
-		spawnRate:  1200 * time.Millisecond,
-		enemySpeed: 3, // move every 3 ticks (150ms)
+		width:           width,
+		height:          height,
+		enemies:         make([]*Entity, 0),
+		bullets:         make([]*Entity, 0),
+		powerUps:        make([]*Entity, 0),
+		score:           0,
+		lives:           3,
+		level:           1,
+		gameOver:        false,
+		paused:          false,
+		lastSpawn:       time.Now(),
+		spawnRate:       1200 * time.Millisecond,
+		enemySpeed:      3, // move every 3 ticks (150ms)
+		showProgress:    false,
+		progressSpinner: components.NewSpinner(),
 	}
 
 	// Create player
@@ -305,6 +315,29 @@ func (g *Game) GetScore() int {
 	return g.score
 }
 
+// SetProgressInfo updates the analysis progress indicator
+func (g *Game) SetProgressInfo(phase string, done, failed bool) {
+	g.showProgress = true
+	g.progressPhase = phase
+	g.progressDone = done
+	g.progressFailed = failed
+}
+
+// ClearProgressInfo hides the progress indicator
+func (g *Game) ClearProgressInfo() {
+	g.showProgress = false
+	g.progressPhase = ""
+	g.progressDone = false
+	g.progressFailed = false
+}
+
+// TickProgressSpinner advances the progress spinner animation
+func (g *Game) TickProgressSpinner() {
+	if g.progressSpinner != nil {
+		g.progressSpinner.Tick()
+	}
+}
+
 // cellType tracks what entity occupies each cell for coloring
 type cellType int
 
@@ -431,6 +464,26 @@ func (g *Game) Render() string {
 		styles.Accent.Render(levelStr),
 	)
 
+	// Progress indicator
+	var progressIndicator string
+	if g.showProgress {
+		if g.progressDone {
+			progressIndicator = styles.SuccessText.Render("✓ Analysis complete")
+		} else if g.progressFailed {
+			progressIndicator = styles.Error.Render("✗ Analysis failed")
+		} else if g.progressPhase != "" {
+			progressIndicator = g.progressSpinner.SpinnerWithText(g.progressPhase)
+		} else {
+			progressIndicator = g.progressSpinner.SpinnerWithText("Analyzing...")
+		}
+		progressIndicator = lipgloss.NewStyle().
+			Width(g.width).
+			Align(lipgloss.Center).
+			PaddingTop(0).
+			PaddingBottom(1).
+			Render(progressIndicator)
+	}
+
 	// Game box
 	gameBox := lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
@@ -451,29 +504,44 @@ func (g *Game) Render() string {
 			styles.Box.Render(styles.Accent.Render("PAUSED\n\nPress P to continue")),
 		)
 	} else if g.gameOver {
+		gameOverContent := lipgloss.JoinVertical(
+			lipgloss.Center,
+			styles.Error.Render("GAME OVER"),
+			"",
+			styles.Body.Render("Final Score: ")+styles.Accent.Render(scoreStr),
+			"",
+			styles.Muted.Render("Press R to restart • ESC to exit"),
+		)
 		overlay = lipgloss.Place(
 			g.width,
 			g.height,
 			lipgloss.Center,
 			lipgloss.Center,
-			styles.Box.Render(
-				styles.Error.Render("GAME OVER\n\n")+
-					styles.Body.Render("Final Score: ")+
-					styles.Accent.Render(scoreStr+"\n\n")+
-					styles.Muted.Render("Press R to restart • ESC to exit"),
-			),
+			styles.Box.Render(gameOverContent),
 		)
 	}
 
 	// Combine
-	result := lipgloss.JoinVertical(
-		lipgloss.Center,
-		header,
-		"",
-		gameBox,
-		"",
-		footer,
-	)
+	var result string
+	if progressIndicator != "" {
+		result = lipgloss.JoinVertical(
+			lipgloss.Center,
+			header,
+			"",
+			gameBox,
+			progressIndicator,
+			footer,
+		)
+	} else {
+		result = lipgloss.JoinVertical(
+			lipgloss.Center,
+			header,
+			"",
+			gameBox,
+			"",
+			footer,
+		)
+	}
 
 	if overlay != "" {
 		result = overlay

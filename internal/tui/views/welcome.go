@@ -49,6 +49,13 @@ func (v *WelcomeView) InitAnimation() tea.Cmd {
 	return v.anim.Init()
 }
 
+// ResetAnimation recreates the animation so it plays from the start
+func (v *WelcomeView) ResetAnimation() tea.Cmd {
+	v.anim = components.NewASCIIMotion(styles.IsDarkBackground)
+	v.anim.SetSize(v.width, v.height)
+	return v.anim.Init()
+}
+
 // Render the welcome view
 func (v *WelcomeView) Render() string {
 	// Content width for consistent centering

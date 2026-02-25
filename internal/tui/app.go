@@ -296,9 +296,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, tick())
 
 	case CountdownMsg:
+		if a.state != StateAuth {
+			break
+		}
 		a.authCountdown = int(msg)
 		if a.authCountdown <= 0 {
-			// Open browser and transition to waiting state
 			if a.authView != nil {
 				browser.OpenURL(a.authView.GetAuthURL())
 				a.authView.SetAuthState(views.AuthStateWaiting)
@@ -525,6 +527,7 @@ func (a *App) handleProviderKeys(msg tea.KeyMsg) tea.Cmd {
 		return a.selectProvider()
 	case "esc":
 		a.state = StateWelcome
+		return a.welcomeView.ResetAnimation()
 	}
 	return nil
 }
